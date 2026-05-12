@@ -209,7 +209,7 @@ def _find_csv_files(prefix: str, search_dirs: list[Path], since: str | None = No
 
 # --- 1. MES Production --------------------------------------------------------
 
-def ingest_production(since: str | None = None) -> pd.DataFrame:
+def ingest_production(since: str | None = None, exclude_dates: set | None = None) -> pd.DataFrame:
     """
     Load and normalise MES production CSVs using DATE-STITCHING.
 
@@ -226,7 +226,11 @@ def ingest_production(since: str | None = None) -> pd.DataFrame:
       - Revision-tolerant: newer file silently wins for overlapping dates
       - No leak path via "noise columns" (cv, category, etc.)
 
-    If `since` (YYYY-MM-DD) provided, only files newer than that date are read.
+    Parameters:
+      since         — YYYY-MM-DD: only files with filename-date > since are read
+      exclude_dates — set of dates already in the mart (incremental mode);
+                      stitching skips any date in this set, so we never re-read
+                      data we already have. Pass None for a full ingest.
     """
     files = _find_csv_files(PRODUCTION_PREFIX, [NETWORK_PATH, RAWDATA_PATH], since=since)
     if not files:
@@ -238,7 +242,12 @@ def ingest_production(since: str | None = None) -> pd.DataFrame:
 
     cutoff = _cutoff_date()
     active = _active_raw_names()
-    seen_dates: set = set()
+    # Pre-populate seen_dates with already-ingested dates so stitching skips
+    # them entirely. In --full mode exclude_dates is None → seen starts empty.
+    seen_dates: set = set(exclude_dates) if exclude_dates else set()
+    pre_seen = len(seen_dates)
+    if pre_seen:
+        log.info(f"  Production: pre-loaded {pre_seen} dates already in mart (incremental mode)")
     frames = []
 
     for f in files:
@@ -323,14 +332,15 @@ def ingest_production(since: str | None = None) -> pd.DataFrame:
     df = df[df["date"] >= _cutoff_date()].copy()
     df = df[["site", "workcell", "sub_workcell", "assembly", "qty", "date", "shift"]].copy()
 
+    new_dates_count = len(seen_dates) - pre_seen
     log.info(f"Production: {len(df)} rows after normalisation and filtering "
-             f"({len(seen_dates)} unique date(s) covered)")
+             f"({new_dates_count} new date(s) from this run; {len(seen_dates)} total tracked)")
     return df
 
 
 # --- 2. eTMS Paid Hours (Raw, employee-level) ----------------------------------
 
-def ingest_paid_hours(since: str | None = None) -> pd.DataFrame:
+def ingest_paid_hours(since: str | None = None, exclude_dates: set | None = None) -> pd.DataFrame:
     """
     Load row-level paid hours from PEN_PaidHours_Raw_*.csv using DATE-STITCHING.
 
@@ -342,7 +352,12 @@ def ingest_paid_hours(since: str | None = None) -> pd.DataFrame:
         the newer files
 
     Source of truth for OLE input hours. Each row = one employee × one shift.
-    If `since` (YYYY-MM-DD) provided, only files newer than that date are read.
+
+    Parameters:
+      since         — YYYY-MM-DD: only files with filename-date > since are read
+      exclude_dates — set of dates already in the mart (incremental mode);
+                      stitching skips any date in this set, so we never re-read
+                      data we already have. Pass None for a full ingest.
 
     Columns captured from raw file:
       Site, CostCenter, WorkCell, SubWorkCell,
@@ -362,7 +377,12 @@ def ingest_paid_hours(since: str | None = None) -> pd.DataFrame:
     frames = []
     cutoff = _cutoff_date()
     active = _active_raw_names()   # only raw names that map to an ACTIVE (configured) workcell
-    seen_dates: set = set()
+    # Pre-populate seen_dates with already-ingested dates so stitching skips
+    # them entirely. In --full mode exclude_dates is None → seen starts empty.
+    seen_dates: set = set(exclude_dates) if exclude_dates else set()
+    pre_seen = len(seen_dates)
+    if pre_seen:
+        log.info(f"  Paid hours: pre-loaded {pre_seen} dates already in mart (incremental mode)")
 
     for f in files:
         try:
@@ -467,8 +487,9 @@ def ingest_paid_hours(since: str | None = None) -> pd.DataFrame:
     # No drop_duplicates here — date-stitching above guarantees each date
     # comes from exactly one file, so cross-file replicas are impossible.
 
+    new_dates_count = len(seen_dates) - pre_seen
     log.info(f"Raw paid hours: {len(df)} rows after normalisation and filtering "
-             f"({len(seen_dates)} unique date(s) covered)")
+             f"({new_dates_count} new date(s) from this run; {len(seen_dates)} total tracked)")
     log.info(f"  value_type breakdown: {df['value_type'].value_counts().to_dict()}")
     return df
 
@@ -625,12 +646,32 @@ def run(mode: str = "incremental") -> bool:
     prod_since  = state.get("production")        if mode == "incremental" else None
     hours_since = state.get("paid_hours_raw")    if mode == "incremental" else None
 
+    # Pre-load dates already in the parquet marts so stitching skips them.
+    # Full mode: marts get wiped, no point pre-loading → pass None.
+    prod_exclude_dates  = None
+    hours_exclude_dates = None
     if mode == "incremental":
         log.info(f"  Production high-water mark:  {prod_since or '(none — first run)'}")
         log.info(f"  Paid hours high-water mark:  {hours_since or '(none — first run)'}")
+        if MART["production"].exists():
+            try:
+                prod_exclude_dates = set(
+                    pd.to_datetime(pd.read_parquet(MART["production"])["date"])
+                      .dt.date.dropna().unique()
+                )
+            except Exception as e:
+                log.warning(f"  Could not pre-load production dates ({e}); proceeding without exclusion.")
+        if MART["paid_hours"].exists():
+            try:
+                hours_exclude_dates = set(
+                    pd.to_datetime(pd.read_parquet(MART["paid_hours"])["date"])
+                      .dt.date.dropna().unique()
+                )
+            except Exception as e:
+                log.warning(f"  Could not pre-load paid-hours dates ({e}); proceeding without exclusion.")
 
-    prod_new  = ingest_production(since=prod_since)
-    hours_new = ingest_paid_hours(since=hours_since)
+    prod_new  = ingest_production(since=prod_since,  exclude_dates=prod_exclude_dates)
+    hours_new = ingest_paid_hours(since=hours_since, exclude_dates=hours_exclude_dates)
     smh       = ingest_smh()  # SMH lives locally, no retention concern → always full
 
     if smh.empty:

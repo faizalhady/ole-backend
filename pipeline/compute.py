@@ -4,14 +4,14 @@ compute.py
 Reads the clean Parquet files from the mart, performs DuckDB JOINs,
 computes OLE per workcell per date per shift, and writes ole_computed.parquet.
 
-OLE formula (matches existing OLE web tool):
+OLE formula:
   Numerator   = SUM(qty x smh_value)   [per workcell, date, shift]
   Denominator = SUM(tph_direct)         [per workcell, date, shift, ALL rows]
   OLE %       = (Numerator / Denominator) x 100
 
-IMPORTANT: PEN_PaidHours_Raw_* TPHDirect already contains direct + support hours
-combined per employee row. SUM all rows (VA, NVA, blank) — do NOT filter by
-value_type for the denominator. value_type is only used for VA/NVA split display.
+Source of truth for input hours: raw_paid_hours.parquet (from PEN_PaidHours_Raw_*).
+SUM all rows regardless of value_type (VA, NVA, blank). value_type is only
+used for the VA/NVA split display — never for the OLE denominator.
 """
 
 import sys
@@ -91,24 +91,28 @@ def run() -> bool:
     log.info("Step 2 complete -- input hours aggregated (ALL rows summed)")
 
     # ── Step 3: JOIN and compute OLE ──────────────────────────────────────────
+    # FULL OUTER JOIN — a (workcell, date, shift) cell appears if EITHER side
+    # has data. Critical for catching shifts where employees were paid but no
+    # production was scanned (NO_OUTPUT_SMH) — those hours must hit the OLE
+    # denominator, otherwise we silently inflate the OLE % by hiding bad shifts.
     con.execute("""
     CREATE TEMP TABLE ole_result AS
     SELECT
-        o.workcell,
-        o.date,
-        o.shift,
+        COALESCE(o.workcell, h.workcell)                        AS workcell,
+        COALESCE(o.date,     h.date)                            AS date,
+        COALESCE(o.shift,    h.shift)                           AS shift,
 
         s_meta.stage_label,
         s_meta.scan_stage,
 
-        -- output side
-        o.assembly_count,
-        o.total_qty,
-        ROUND(o.effective_output_smh, 4)                        AS effective_output_smh,
-        o.qty_missing_smh,
-        o.assemblies_missing_smh,
+        -- output side (0 when paid-hours-only shift)
+        COALESCE(o.assembly_count,        0)                    AS assembly_count,
+        COALESCE(o.total_qty,             0)                    AS total_qty,
+        ROUND(COALESCE(o.effective_output_smh, 0), 4)           AS effective_output_smh,
+        COALESCE(o.qty_missing_smh,       0)                    AS qty_missing_smh,
+        COALESCE(o.assemblies_missing_smh, 0)                   AS assemblies_missing_smh,
 
-        -- input side
+        -- input side (0 when production-only shift)
         COALESCE(h.total_hc_direct,   0)                        AS hc_direct,
         COALESCE(h.total_input_hours, 0)                        AS total_input_hours,
 
@@ -120,21 +124,21 @@ def run() -> bool:
         CASE
             WHEN COALESCE(h.total_input_hours, 0) = 0 THEN NULL
             ELSE ROUND(
-                (o.effective_output_smh / h.total_input_hours) * 100, 2
+                (COALESCE(o.effective_output_smh, 0) / h.total_input_hours) * 100, 2
             )
         END                                                      AS ole_pct,
 
         -- Data quality flag
         CASE
-            WHEN COALESCE(h.total_input_hours, 0) = 0 THEN 'NO_INPUT_HOURS'
-            WHEN o.effective_output_smh = 0            THEN 'NO_OUTPUT_SMH'
-            WHEN o.qty_missing_smh > 0                 THEN 'PARTIAL_SMH'
+            WHEN COALESCE(h.total_input_hours,    0) = 0 THEN 'NO_INPUT_HOURS'
+            WHEN COALESCE(o.effective_output_smh, 0) = 0 THEN 'NO_OUTPUT_SMH'
+            WHEN COALESCE(o.qty_missing_smh,      0) > 0 THEN 'PARTIAL_SMH'
             ELSE 'OK'
         END                                                      AS data_quality
 
     FROM output_smh o
 
-    LEFT JOIN input_hours h
+    FULL OUTER JOIN input_hours h
            ON o.workcell = h.workcell
           AND o.date     = h.date
           AND o.shift    = h.shift
@@ -142,11 +146,11 @@ def run() -> bool:
     LEFT JOIN (
         SELECT DISTINCT workcell, stage_label, scan_stage
         FROM smh_lookup
-    ) s_meta ON o.workcell = s_meta.workcell
+    ) s_meta ON COALESCE(o.workcell, h.workcell) = s_meta.workcell
 
-    ORDER BY o.workcell, o.date, o.shift
+    ORDER BY workcell, date, shift
     """)
-    log.info("Step 3 complete -- OLE computed")
+    log.info("Step 3 complete -- OLE computed (FULL OUTER JOIN — paid-hours-only shifts now visible)")
 
     # ── Step 4: SMH coverage per assembly ─────────────────────────────────────
     con.execute(f"""

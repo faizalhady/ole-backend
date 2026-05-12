@@ -19,11 +19,12 @@ PAID_HOURS_RAW_PREFIX = "PEN_PaidHours_Raw_"         # row-level from RawData â€
 # This is the authoritative source â€” do not auto-detect from data.
 SMH_FILES = {
     "AOP1":                DATA_RAW_DIR / "AOP1_SMH.xls",           # SMT
-    "ARISTA NETWORKS":     DATA_RAW_DIR / "ARISTA_SMH.xls",         # SMT
+    "ARISTA NETWORKS PCA": DATA_RAW_DIR / "ARISTA_SMH.xls",         # SMT  (renamed from "ARISTA NETWORKS")
     "ARISTA NETWORKS HLA": DATA_RAW_DIR / "ARISTA_HLA_SMH.xls",     # Backend
     "ASP":                 DATA_RAW_DIR / "ASP_SMH.xls",             # BoxBuild
-    # "BECKMAN COULTER":     DATA_RAW_DIR / "BC_SMH.xls",              # SMT -- temporarily disabled: WW18 OLE 182% due to incorrect SMH file, re-enable after SMH is corrected
-    "IMED":                DATA_RAW_DIR / "IMED_SMH.xls",            # SMT
+    "LAM RESEARCH":        DATA_RAW_DIR / "LAM_SMH.xls",             # Backend
+    "BECKMAN COULTER":     DATA_RAW_DIR / "BC_SMH.xls",              # SMT  (re-enabled)
+    "IMED PCA":            DATA_RAW_DIR / "IMED_SMH.xls",            # SMT  (renamed from "IMED")
     "KEYSIGHT HLA":        DATA_RAW_DIR / "KEYSIGHT_HLA_SMH.xls",   # BoxBuild
     "UTAS":                DATA_RAW_DIR / "UTAS_SMH.xls",            # Backend
     "WABTEC":              DATA_RAW_DIR / "WABTEC_SMH.xls",          # Backend
@@ -74,19 +75,19 @@ WORKCELL_CONFIG = {
         "label":      "Backend",
         "plant":      "Plant 1",
     },
-    # "BECKMAN COULTER": {         # temporarily disabled: WW18 OLE 182% due to incorrect SMH file
-    #     "scan_stage": "SMT",        # re-enable after BC_SMH.xls is corrected and re-ingested
-    #     "smh_col":    "SMH/ Unit - SMT",
-    #     "label":      "SMT",
-    #     "plant":      "Plant 1",
-    # },
-    "IMED": {
+    "BECKMAN COULTER": {
         "scan_stage": "SMT",
         "smh_col":    "SMH/ Unit - SMT",
         "label":      "SMT",
         "plant":      "Plant 1",
     },
-    "ARISTA NETWORKS": {
+    "IMED PCA": {
+        "scan_stage": "SMT",
+        "smh_col":    "SMH/ Unit - SMT",
+        "label":      "SMT",
+        "plant":      "Plant 1",
+    },
+    "ARISTA NETWORKS PCA": {
         "scan_stage": "SMT",
         "smh_col":    "SMH/ Unit - SMT",
         "label":      "SMT",
@@ -97,6 +98,12 @@ WORKCELL_CONFIG = {
         "smh_col":    "SMH/ Unit - Backend",
         "label":      "Backend",
         "plant":      "Plant 2",
+    },
+    "LAM RESEARCH": {
+        "scan_stage": "Backend",
+        "smh_col":    "SMH/ Unit - Backend",
+        "label":      "Backend",
+        "plant":      "Plant 1",
     },
 }
 

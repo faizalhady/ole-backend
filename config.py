@@ -1,0 +1,119 @@
+from pathlib import Path
+
+# ─── Paths ────────────────────────────────────────────────────────────────────
+BASE_DIR         = Path(__file__).parent
+DATA_RAW_DIR     = BASE_DIR / "data" / "raw"
+DATA_MART_DIR    = BASE_DIR / "data" / "mart"
+
+# Network share where MES and eTMS CSVs are exported to
+# Recent files land in NETWORK_PATH directly; older/archived files are in RawData/
+NETWORK_PATH     = Path(r"\\penhomev10\OLE")
+RAWDATA_PATH     = Path(r"\\penhomev10\OLE\RawData")
+
+# ─── CSV filename patterns (date suffix: _YYYYMMDD) ───────────────────────────
+PRODUCTION_PREFIX     = "PEN_TotalProduction_"
+PAID_HOURS_RAW_PREFIX = "PEN_PaidHours_Raw_"         # row-level from RawData — USE THIS
+
+# ─── SMH source files (stored in data/raw/) ───────────────────────────────────
+# Comment on each line indicates which SMH stage column is used for that workcell.
+# This is the authoritative source — do not auto-detect from data.
+SMH_FILES = {
+    "AOP1":                DATA_RAW_DIR / "AOP1_SMH.xls",           # SMT
+    "ARISTA NETWORKS":     DATA_RAW_DIR / "ARISTA_SMH.xls",         # SMT
+    "ARISTA NETWORKS HLA": DATA_RAW_DIR / "ARISTA_HLA_SMH.xls",     # Backend
+    "ASP":                 DATA_RAW_DIR / "ASP_SMH.xls",             # BoxBuild
+    # "BECKMAN COULTER":     DATA_RAW_DIR / "BC_SMH.xls",              # SMT -- temporarily disabled: WW18 OLE 182% due to incorrect SMH file, re-enable after SMH is corrected
+    "IMED":                DATA_RAW_DIR / "IMED_SMH.xls",            # SMT
+    "KEYSIGHT HLA":        DATA_RAW_DIR / "KEYSIGHT_HLA_SMH.xls",   # BoxBuild
+    "UTAS":                DATA_RAW_DIR / "UTAS_SMH.xls",            # Backend
+    "WABTEC":              DATA_RAW_DIR / "WABTEC_SMH.xls",          # Backend
+
+    # --- SMH files available but workcell not yet active ---
+    # "KEYSIGHT":          DATA_RAW_DIR / "KEYSIGHT_PCA_SMH.xls",   # PCA variant — pending
+
+    # --- Workcells in CSV with no SMH file yet (cannot be activated) ---
+    # "DYSON"      "INFINERA"  "IROBOT"   "K IXIA"   "LAM RESEARCH"
+    # "MSI"        "MSI HLA"   "PHOTONICS" "TELLABS"  "TMO"
+    # SUPPORT P1 / SUPPORT P2 / WAREHOUSE P1 / WAREHOUSE P2 — indirect labor, no SMH needed
+}
+
+# ─── Workcell config ──────────────────────────────────────────────────────────
+# scan_stage : SubWorkcell value in MES that represents this workcell's final output scan
+# smh_col    : which SMH column to use for the OLE numerator
+# label      : human-readable stage label for the dashboard
+# plant      : plant grouping for frontend filtering
+#              "Plant 1" = main plant  |  "Plant 2" = Batu Kawan / ARISTA lines
+WORKCELL_CONFIG = {
+    "ASP": {
+        "scan_stage": "BoxBuild",
+        "smh_col":    "SMH/ Unit - BoxBuild",
+        "label":      "BoxBuild",
+        "plant":      "Plant 1",
+    },
+    "AOP1": {
+        "scan_stage": "SMT",
+        "smh_col":    "SMH/ Unit - SMT",
+        "label":      "SMT",
+        "plant":      "Plant 1",
+    },
+    "KEYSIGHT HLA": {
+        "scan_stage": "BoxBuild",
+        "smh_col":    "SMH/ Unit - BoxBuild",
+        "label":      "BoxBuild",
+        "plant":      "Plant 1",
+    },
+    "WABTEC": {
+        "scan_stage": "Backend",
+        "smh_col":    "SMH/ Unit - Backend",
+        "label":      "Backend",
+        "plant":      "Plant 1",
+    },
+    "UTAS": {
+        "scan_stage": "Backend",
+        "smh_col":    "SMH/ Unit - Backend",
+        "label":      "Backend",
+        "plant":      "Plant 1",
+    },
+    # "BECKMAN COULTER": {         # temporarily disabled: WW18 OLE 182% due to incorrect SMH file
+    #     "scan_stage": "SMT",        # re-enable after BC_SMH.xls is corrected and re-ingested
+    #     "smh_col":    "SMH/ Unit - SMT",
+    #     "label":      "SMT",
+    #     "plant":      "Plant 1",
+    # },
+    "IMED": {
+        "scan_stage": "SMT",
+        "smh_col":    "SMH/ Unit - SMT",
+        "label":      "SMT",
+        "plant":      "Plant 1",
+    },
+    "ARISTA NETWORKS": {
+        "scan_stage": "SMT",
+        "smh_col":    "SMH/ Unit - SMT",
+        "label":      "SMT",
+        "plant":      "Plant 2",
+    },
+    "ARISTA NETWORKS HLA": {
+        "scan_stage": "Backend",
+        "smh_col":    "SMH/ Unit - Backend",
+        "label":      "Backend",
+        "plant":      "Plant 2",
+    },
+}
+
+# All active workcell names — used to filter MES and eTMS data.
+# Derived automatically from WORKCELL_CONFIG keys.
+ACTIVE_WORKCELLS = list(WORKCELL_CONFIG.keys())
+
+# ─── Date range ───────────────────────────────────────────────────────────────
+# Fixed historical start date for data ingestion.
+DATE_FROM = "2025-01-01"
+
+# ─── Mart filenames ───────────────────────────────────────────────────────────
+MART = {
+    "production":  DATA_MART_DIR / "raw_production.parquet",
+    "paid_hours":  DATA_MART_DIR / "raw_paid_hours.parquet",
+    "smh":         DATA_MART_DIR / "smh_lookup.parquet",
+    "ole":         DATA_MART_DIR / "ole_computed.parquet",
+    "smh_status":  DATA_MART_DIR / "smh_assembly_status.parquet",
+    "ole_weekly":  DATA_MART_DIR / "ole_weekly.parquet",
+}

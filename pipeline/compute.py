@@ -22,7 +22,7 @@ import logging
 import duckdb
 import pandas as pd
 
-from config import MART, WORKCELL_CONFIG
+from config import MART, WORKCELL_CONFIG, INDIRECT_LABOR_CONFIG
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)s  %(message)s")
 log = logging.getLogger(__name__)
@@ -70,11 +70,12 @@ def run() -> bool:
     log.info("Step 1 complete -- output SMH computed")
 
     # ── Step 2: Aggregate input hours per workcell / date / shift ─────────────
+    # ONLY for production workcells — indirect labor (warehouses/support) is
+    # handled in Step 5 and written to its own mart. Keeping it out of
+    # input_hours prevents indirect entities from leaking into ole_computed.
     # SUM all tph_direct rows regardless of value_type (VA/NVA/blank).
-    # The raw paid hours file stores combined hours per employee in tph_direct —
-    # filtering by value_type would DROP rows and undercount the denominator.
-    # value_type is only used for VA/NVA split display, NOT for OLE calculation.
-    con.execute("""
+    workcell_list = ", ".join(f"'{w}'" for w in WORKCELL_CONFIG.keys())
+    con.execute(f"""
     CREATE TEMP TABLE input_hours AS
     SELECT
         workcell,
@@ -86,9 +87,10 @@ def run() -> bool:
         SUM(CASE WHEN value_type = 'VA'  THEN tph_direct ELSE 0 END) AS va_hours,
         SUM(CASE WHEN value_type = 'NVA' OR value_type = '' THEN tph_direct ELSE 0 END) AS nva_hours
     FROM paid_hours
+    WHERE workcell IN ({workcell_list})
     GROUP BY workcell, date, shift
     """)
-    log.info("Step 2 complete -- input hours aggregated (ALL rows summed)")
+    log.info("Step 2 complete -- input hours aggregated for workcells only")
 
     # ── Step 3: JOIN and compute OLE ──────────────────────────────────────────
     # FULL OUTER JOIN — a (workcell, date, shift) cell appears if EITHER side
@@ -177,6 +179,32 @@ def run() -> bool:
     """)
     log.info("Step 4 complete -- SMH assembly coverage computed")
 
+    # ── Step 5: Indirect labor (warehouses, support pools) ────────────────────
+    # Non-workcell entities have paid hours but no production / no SMH.
+    # Written to a separate mart so they never leak into OLE calculations.
+    indirect_list = ", ".join(f"'{e}'" for e in INDIRECT_LABOR_CONFIG.keys())
+    if INDIRECT_LABOR_CONFIG:
+        con.execute(f"""
+        CREATE TEMP TABLE indirect_labor AS
+        SELECT
+            workcell                                                AS entity,
+            date,
+            shift,
+            COUNT(*)                                                AS headcount,
+            SUM(thc_direct)                                         AS total_hc_direct,
+            ROUND(SUM(tph_direct), 4)                               AS total_input_hours,
+            ROUND(SUM(CASE WHEN value_type = 'VA'  THEN tph_direct ELSE 0 END), 4) AS va_hours,
+            ROUND(SUM(CASE WHEN value_type = 'NVA' OR value_type = '' THEN tph_direct ELSE 0 END), 4) AS nva_hours
+        FROM paid_hours
+        WHERE workcell IN ({indirect_list})
+        GROUP BY workcell, date, shift
+        ORDER BY workcell, date, shift
+        """)
+        log.info("Step 5 complete -- indirect labor aggregated")
+    else:
+        con.execute("CREATE TEMP TABLE indirect_labor AS SELECT NULL AS entity LIMIT 0")
+        log.info("Step 5 skipped -- INDIRECT_LABOR_CONFIG is empty")
+
     # ── Export ────────────────────────────────────────────────────────────────
     result = con.execute("SELECT * FROM ole_result").df()
 
@@ -191,9 +219,21 @@ def run() -> bool:
     smh_status = con.execute("SELECT * FROM smh_assembly_status").df()
     smh_status.to_parquet(MART["smh_status"], index=False)
 
+    # Indirect labor — attach plant + label from config, then write to its own mart
+    indirect = con.execute("SELECT * FROM indirect_labor").df()
+    if not indirect.empty:
+        indirect["plant"] = indirect["entity"].map(
+            lambda e: INDIRECT_LABOR_CONFIG.get(e, {}).get("plant", "")
+        )
+        indirect["label"] = indirect["entity"].map(
+            lambda e: INDIRECT_LABOR_CONFIG.get(e, {}).get("label", e)
+        )
+    indirect.to_parquet(MART["indirect_labor"], index=False)
+
     # ── Summary log ───────────────────────────────────────────────────────────
-    log.info(f"OLE result:  {len(result)} rows written to ole_computed.parquet")
-    log.info(f"SMH status:  {len(smh_status)} assembly rows written to smh_assembly_status.parquet")
+    log.info(f"OLE result:      {len(result)} rows written to ole_computed.parquet")
+    log.info(f"SMH status:      {len(smh_status)} assembly rows written to smh_assembly_status.parquet")
+    log.info(f"Indirect labor:  {len(indirect)} rows written to indirect_labor.parquet")
 
     summary = con.execute("""
         SELECT

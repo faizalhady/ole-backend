@@ -13,7 +13,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from config import MART, WORKCELL_CONFIG, ACTIVE_WORKCELLS
+from config import MART, WORKCELL_CONFIG, ACTIVE_WORKCELLS, INDIRECT_LABOR_CONFIG
 from database import init_db, get_conn
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)s  %(message)s")
@@ -548,6 +548,48 @@ def get_smh_status(
         ).df())
     finally:
         con.close()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# INDIRECT LABOR — Warehouses, Support pools (non-workcell entities)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/api/indirect-labor")
+def get_indirect_labor(
+    entity:    Optional[str] = Query(None),
+    plant:     Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None),
+    date_to:   Optional[str] = Query(None),
+    shift:     Optional[int] = Query(None),
+):
+    """
+    Returns aggregated paid hours for non-workcell entities (warehouses,
+    support pools). One row per (entity, date, shift).
+    """
+    con = _con()
+    try:
+        _parquet(con, "indirect_labor")
+        clauses = []
+        if entity:    clauses.append(f"entity = '{entity}'")
+        if plant:     clauses.append(f"plant = '{plant}'")
+        if date_from: clauses.append(f"date >= '{date_from}'")
+        if date_to:   clauses.append(f"date <= '{date_to}'")
+        if shift:     clauses.append(f"shift = {shift}")
+        where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+        return _df_to_json(con.execute(
+            f"SELECT * FROM indirect_labor {where} ORDER BY entity, date, shift"
+        ).df())
+    finally:
+        con.close()
+
+
+@app.get("/api/indirect-labor/entities")
+def get_indirect_labor_entities():
+    """Return the configured indirect labor entities and their metadata."""
+    return [
+        {"entity": k, **v}
+        for k, v in INDIRECT_LABOR_CONFIG.items()
+    ]
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

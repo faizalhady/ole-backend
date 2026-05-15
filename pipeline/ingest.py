@@ -37,6 +37,7 @@ from config import (
     DATA_MART_DIR,
     SMH_FILES,
     WORKCELL_CONFIG,
+    INDIRECT_LABOR_CONFIG,
     ACTIVE_WORKCELLS,
     DATE_FROM,
     MART,
@@ -82,23 +83,37 @@ _WORKCELL_MAP: dict[str, str] = {
     "LAM RESEARCH":         "LAM RESEARCH",
     "Lam":                  "LAM RESEARCH",
     "Lam Research":         "LAM RESEARCH",
+    # Indirect labor (non-workcell entities — paid hours only, no production / SMH)
+    "WAREHOUSE P1":         "WAREHOUSE P1",
+    "Warehouse P1":         "WAREHOUSE P1",
+    "WAREHOUSE P2":         "WAREHOUSE P2",
+    "Warehouse P2":         "WAREHOUSE P2",
+    "SUPPORT P1":           "SUPPORT P1",
+    "Support P1":           "SUPPORT P1",
+    "SUPPORT P2":           "SUPPORT P2",
+    "Support P2":           "SUPPORT P2",
 }
 
 
+def _active_canonical_names() -> set[str]:
+    """All configured canonical entity names — workcells AND indirect labor."""
+    return set(WORKCELL_CONFIG.keys()) | set(INDIRECT_LABOR_CONFIG.keys())
+
+
 def _active_raw_names() -> set[str]:
-    """Raw CSV workcell names that normalize to a configured (active) workcell."""
-    active_canonical = set(WORKCELL_CONFIG.keys())
-    return {raw for raw, canonical in _WORKCELL_MAP.items() if canonical in active_canonical}
+    """Raw CSV names that normalize to a configured (active) entity."""
+    active = _active_canonical_names()
+    return {raw for raw, canonical in _WORKCELL_MAP.items() if canonical in active}
 
 
 def _normalise_workcell(name: str) -> str | None:
-    """Normalise a raw CSV workcell name to canonical. Returns None for unknowns."""
+    """Normalise a raw CSV workcell/entity name to canonical. Returns None for unknowns."""
     if not isinstance(name, str):
         return None
     cleaned = name.strip()
     canonical = _WORKCELL_MAP.get(cleaned) or _WORKCELL_MAP.get(cleaned.upper())
     # Defense in depth: only return canonical names that are actually configured.
-    if canonical and canonical in WORKCELL_CONFIG:
+    if canonical and canonical in _active_canonical_names():
         return canonical
     return None
 

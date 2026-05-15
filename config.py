@@ -107,9 +107,22 @@ WORKCELL_CONFIG = {
     },
 }
 
+# ─── Indirect labor (non-workcell entities) ─────────────────────────────────
+# Warehouses and support pools. Have paid hours but NO production / NO SMH.
+# Not measured by OLE — tracked as overhead.
+INDIRECT_LABOR_CONFIG = {
+    "WAREHOUSE P1": {"label": "Warehouse P1", "plant": "Plant 1"},
+    "WAREHOUSE P2": {"label": "Warehouse P2", "plant": "Plant 2"},
+    "SUPPORT P1":   {"label": "Support P1",   "plant": "Plant 1"},
+    "SUPPORT P2":   {"label": "Support P2",   "plant": "Plant 2"},
+}
+
 # All active workcell names — used to filter MES and eTMS data.
 # Derived automatically from WORKCELL_CONFIG keys.
 ACTIVE_WORKCELLS = list(WORKCELL_CONFIG.keys())
+
+# Combined list of every entity ingest should keep (workcells + indirect labor).
+ACTIVE_ENTITIES = list(WORKCELL_CONFIG.keys()) + list(INDIRECT_LABOR_CONFIG.keys())
 
 # ─── Date range ───────────────────────────────────────────────────────────────
 # Fixed historical start date for data ingestion.
@@ -117,10 +130,11 @@ DATE_FROM = "2025-01-01"
 
 # ─── Mart filenames ───────────────────────────────────────────────────────────
 MART = {
-    "production":  DATA_MART_DIR / "raw_production.parquet",
-    "paid_hours":  DATA_MART_DIR / "raw_paid_hours.parquet",
-    "smh":         DATA_MART_DIR / "smh_lookup.parquet",
-    "ole":         DATA_MART_DIR / "ole_computed.parquet",
-    "smh_status":  DATA_MART_DIR / "smh_assembly_status.parquet",
-    "ole_weekly":  DATA_MART_DIR / "ole_weekly.parquet",
+    "production":      DATA_MART_DIR / "raw_production.parquet",
+    "paid_hours":      DATA_MART_DIR / "raw_paid_hours.parquet",
+    "smh":             DATA_MART_DIR / "smh_lookup.parquet",
+    "ole":             DATA_MART_DIR / "ole_computed.parquet",
+    "smh_status":      DATA_MART_DIR / "smh_assembly_status.parquet",
+    "ole_weekly":      DATA_MART_DIR / "ole_weekly.parquet",
+    "indirect_labor":  DATA_MART_DIR / "indirect_labor.parquet",
 }

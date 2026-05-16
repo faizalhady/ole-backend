@@ -593,6 +593,46 @@ def get_indirect_labor_entities():
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# MAN-HOURS DISTRIBUTION — per-shift loss buckets (NVA / Lunch / MFG DT / DT / Lost)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/api/mh-distribution")
+def get_mh_distribution(
+    workcell:  Optional[str] = Query(None),
+    plant:     Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None),
+    date_to:   Optional[str] = Query(None),
+    shift:     Optional[int] = Query(None),
+):
+    """
+    Returns per-shift man-hours loss-distribution rows from mh_distribution.parquet.
+    Hours are raw values — caller is responsible for any %/aggregation. Plant
+    filter resolves through WORKCELL_CONFIG since the mart itself doesn't store
+    plant (kept minimal — joinable to ole_computed).
+    """
+    con = _con()
+    try:
+        _parquet(con, "mh_distribution")
+        clauses = []
+        if workcell:  clauses.append(f"workcell = '{workcell}'")
+        if date_from: clauses.append(f"date >= '{date_from}'")
+        if date_to:   clauses.append(f"date <= '{date_to}'")
+        if shift:     clauses.append(f"shift = {shift}")
+        if plant:
+            wcs = [w for w, cfg in WORKCELL_CONFIG.items() if cfg.get("plant") == plant]
+            if not wcs:
+                return []
+            in_list = ", ".join(f"'{w}'" for w in wcs)
+            clauses.append(f"workcell IN ({in_list})")
+        where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+        return _df_to_json(con.execute(
+            f"SELECT * FROM mh_distribution {where} ORDER BY workcell, date, shift"
+        ).df())
+    finally:
+        con.close()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # DOWNTIME LOGS — SQLite CRUD
 # ═══════════════════════════════════════════════════════════════════════════════
 

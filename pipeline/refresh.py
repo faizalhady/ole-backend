@@ -21,6 +21,7 @@ Steps
   1. ingest  — load raw sources, normalise, write Parquet
   2. compute — DuckDB JOIN + OLE calculation, write ole_computed.parquet
   3. weekly  — ISO-week aggregation, write ole_weekly.parquet
+  4. mh      — per-shift man-hours distribution, write mh_distribution.parquet
 """
 
 import sys
@@ -34,6 +35,7 @@ from datetime import datetime
 from pipeline.ingest         import run as run_ingest
 from pipeline.compute        import run as run_compute
 from pipeline.compute_weekly import run as run_compute_weekly
+from pipeline.compute_mh     import run as run_compute_mh
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)s  %(message)s")
 log = logging.getLogger(__name__)
@@ -60,6 +62,11 @@ def run(mode: str = "incremental"):
     ok = run_compute_weekly()
     if not ok:
         log.error("Weekly compute failed — ole_weekly.parquet not written.")
+        sys.exit(1)
+
+    ok = run_compute_mh()
+    if not ok:
+        log.error("MH-distribution compute failed — mh_distribution.parquet not written.")
         sys.exit(1)
 
     elapsed = (datetime.now() - start).total_seconds()

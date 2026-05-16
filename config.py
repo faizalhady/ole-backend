@@ -137,4 +137,5 @@ MART = {
     "smh_status":      DATA_MART_DIR / "smh_assembly_status.parquet",
     "ole_weekly":      DATA_MART_DIR / "ole_weekly.parquet",
     "indirect_labor":  DATA_MART_DIR / "indirect_labor.parquet",
+    "mh_distribution": DATA_MART_DIR / "mh_distribution.parquet",
 }

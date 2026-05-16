@@ -85,7 +85,9 @@ def run() -> bool:
         SUM(thc_direct)                                         AS total_hc_direct,
         SUM(tph_direct)                                         AS total_input_hours,
         SUM(CASE WHEN value_type = 'VA'  THEN tph_direct ELSE 0 END) AS va_hours,
-        SUM(CASE WHEN value_type = 'NVA' OR value_type = '' THEN tph_direct ELSE 0 END) AS nva_hours
+        SUM(CASE WHEN value_type = 'NVA' OR value_type = '' THEN tph_direct ELSE 0 END) AS nva_hours,
+        COUNT(CASE WHEN value_type = 'VA'  THEN 1 END)                        AS va_count,
+        COUNT(CASE WHEN value_type = 'NVA' OR value_type = '' THEN 1 END)     AS nva_count
     FROM paid_hours
     WHERE workcell IN ({workcell_list})
     GROUP BY workcell, date, shift
@@ -121,6 +123,8 @@ def run() -> bool:
         -- VA / NVA breakdown (display only, not used in OLE calculation)
         COALESCE(h.va_hours,          0)                        AS va_hours,
         COALESCE(h.nva_hours,         0)                        AS nva_hours,
+        COALESCE(h.va_count,          0)                        AS va_count,
+        COALESCE(h.nva_count,         0)                        AS nva_count,
 
         -- OLE calculation
         CASE

@@ -173,6 +173,10 @@ def run() -> bool:
         ROUND(SUM(va_hours),  4)                            AS total_va_hours,
         ROUND(SUM(nva_hours), 4)                            AS total_nva_hours,
 
+        -- VA / NVA headcount (paid_hours row counts across all shifts in the week)
+        SUM(va_count)                                       AS total_va_count,
+        SUM(nva_count)                                      AS total_nva_count,
+
         -- Weekly OLE: computed from weekly aggregates (correct method).
         -- Avoids averaging-of-averages distortion from mean(shift OLE%).
         CASE

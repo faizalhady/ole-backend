@@ -593,6 +593,57 @@ def get_indirect_labor_entities():
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# SHIFT OPERATORS — per-shift labor roster (drawer view)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/api/shift-operators")
+def get_shift_operators(
+    workcell:  str = Query(...),
+    date:      Optional[str] = Query(None),
+    shift:     Optional[int] = Query(None),
+    date_from: Optional[str] = Query(None),
+    date_to:   Optional[str] = Query(None),
+):
+    """
+    Operator-level paid_hours rows for the shift drawer.
+
+    Modes:
+      • Single shift  — workcell + date + shift  → ~10-50 rows
+      • Bulk per-WC   — workcell only            → all operators for that
+                         workcell (lets the page prefetch and serve every
+                         drawer click from cache with no network).
+      • Bulk windowed — workcell + date_from/_to → bulk scoped to filter range
+    """
+    if workcell not in WORKCELL_CONFIG and workcell not in INDIRECT_LABOR_CONFIG:
+        raise HTTPException(status_code=400, detail=f"Unknown workcell: {workcell}")
+    if shift is not None and shift not in (1, 2, 3):
+        raise HTTPException(status_code=400, detail="shift must be 1, 2, or 3")
+
+    clauses = [f"workcell = '{workcell}'"]
+    if date:      clauses.append(f"date = '{date}'")
+    if shift:     clauses.append(f"shift = {shift}")
+    if date_from: clauses.append(f"date >= '{date_from}'")
+    if date_to:   clauses.append(f"date <= '{date_to}'")
+    where = "WHERE " + " AND ".join(clauses)
+
+    con = _con()
+    try:
+        _parquet(con, "paid_hours")
+        rows = con.execute(
+            f"""
+            SELECT date, shift, position, value_type, total_input_hours,
+                   thc_direct, tph_direct, sub_workcell, category
+            FROM paid_hours
+            {where}
+            ORDER BY date, shift, value_type DESC, position
+            """
+        ).df()
+        return _df_to_json(rows)
+    finally:
+        con.close()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # MAN-HOURS DISTRIBUTION — per-shift loss buckets (NVA / Lunch / MFG DT / DT / Lost)
 # ═══════════════════════════════════════════════════════════════════════════════
 

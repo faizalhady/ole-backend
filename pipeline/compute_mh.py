@@ -23,11 +23,17 @@ Schema  (one row per workcell + date + shift)
   total_paid_hours           float   — denominator for any %
   effective_output_smh       float   — productive output expressed in hours
 
-Math
-  loss_total           = total_paid_hours − effective_output_smh
-  named_loss           = nva + lunch + mfg_dt + downtime
-  mfg_lost_raw_hours   = loss_total − named_loss          (can go negative)
-  mfg_lost_hours       = max(0, mfg_lost_raw_hours)       (Paynter-friendly)
+Math (percentage-driven residual; can go negative)
+  named_total    = output + nva + lunch + mfg_dt + downtime
+  named_pct      = named_total / total_paid_hours          (> 1 when named over-explains)
+  mfg_lost_pct   = 1 − named_pct                           (negative when named over-explains)
+  mfg_lost_hours = total_paid_hours × mfg_lost_pct         (signed; equivalent to paid − named)
+
+  Equivalent simpler form: mfg_lost_hours = paid − named.
+  This makes the displayed percentage `mfg_lost_hours / paid` equal mfg_lost_pct,
+  so the row's % matches the residual-of-100% definition exactly.
+
+  mfg_lost_raw_hours is kept as an alias for backward compatibility.
 
 Buckets are stored as HOURS (not %). The chart layer computes weighted % at
 display time, so 4-week averages stay mathematically correct regardless of
@@ -117,11 +123,20 @@ def run() -> bool:
         df["downtime_hours"] = 0.0
     df["downtime_hours"] = df["downtime_hours"].fillna(0).astype(float).round(4)
 
-    # ── Residual (MFG Man Hour Lost) ──────────────────────────────────────────
-    named = df["nva_hours"] + df["lunch_hours"] + df["mfg_dt_hours"] + df["downtime_hours"]
-    loss_total = df["total_input_hours"] - df["effective_output_smh"]
-    df["mfg_lost_raw_hours"] = (loss_total - named).round(4)
-    df["mfg_lost_hours"]     = df["mfg_lost_raw_hours"].clip(lower=0).round(4)
+    # ── MFG Man Hour Lost (signed residual; matches the % view) ──────────────
+    # named_total  = output + nva + lunch + mfg_dt + downtime
+    # mfg_lost     = paid − named_total  (signed)
+    # Equivalent: paid × (1 − named/paid). Negative when named over-explains paid.
+    # Using paid − named keeps row %s additive: mfg_lost/paid = 1 − Σ(other%/paid).
+    named_total = (
+        df["effective_output_smh"]
+        + df["nva_hours"]
+        + df["lunch_hours"]
+        + df["mfg_dt_hours"]
+        + df["downtime_hours"]
+    )
+    df["mfg_lost_hours"]     = (df["total_input_hours"] - named_total).round(4)
+    df["mfg_lost_raw_hours"] = df["mfg_lost_hours"]   # alias retained for back-compat
 
     # ── Rename + final shape ──────────────────────────────────────────────────
     df = df.rename(columns={"total_input_hours": "total_paid_hours"})

@@ -45,19 +45,55 @@ data/raw/
 └── KEYSIGHT_HLA_SMH.xls
 ```
 
-## Run the pipeline
+## Pipeline scripts and how to run them
+
+End-to-end via the entry point:
 
 ```bash
-# From ole-backend root
-python pipeline/refresh.py
+python pipeline/refresh.py                # incremental (DEFAULT - SAFE)
+python pipeline/refresh.py --incremental  # same as above, explicit
+python pipeline/refresh.py --full         # nuke + rebuild (DANGER)
 ```
 
-This will:
-1. Read CSVs from \\penhomev10\OLE (last 7 days)
-2. Read SMH files from data/raw/
-3. Normalise and write 3 parquet files to data/mart/
-4. Run DuckDB JOINs and compute OLE
-5. Write ole_computed.parquet to data/mart/
+### Modes — when to use which
+
+| Mode | Reads | Marts | Historical rows | When to use |
+|---|---|---|---|---|
+| `--incremental` *(default)* | Only files newer than `.ingest_state.json` watermark | Appends | **PRESERVED** even if source CSVs were retention-deleted from the share | Routine runs, scheduled jobs, normal catch-up |
+| `--full` | Everything currently on the share | Overwrites | **LOST** if a CSV is no longer on the share | Disaster recovery, schema migration |
+
+The state file `data/mart/.ingest_state.json` is the watermark — it records the last successful ingest date per source.
+
+### Step order inside `refresh.py`
+
+1. **ingest** — read MES/eTMS CSVs + SMH files, normalise, write `production.parquet`, `paid_hours.parquet`, `smh_lookup.parquet`
+2. **compute** — DuckDB JOIN production × paid hours × SMH, compute OLE → `ole_computed.parquet`
+3. **compute_weekly** — ISO-week aggregation of `ole_computed` → `ole_weekly.parquet`
+4. **compute_mh** — per-shift man-hours distribution from `ole_computed` → `mh_distribution.parquet`
+
+### Running individual steps directly
+
+Useful when you've only changed the math in one step and don't want to re-ingest.
+
+| Command | What it rebuilds | When |
+|---|---|---|
+| `python pipeline/ingest.py` *(if exposed)* — usually called via refresh | Raw → normalised parquet | Rarely standalone |
+| `python pipeline/compute.py` | `ole_computed.parquet` from raw parquet | OLE math changed |
+| `python pipeline/compute_weekly.py` | `ole_weekly.parquet` from `ole_computed.parquet` | Weekly aggregation changed |
+| `python pipeline/compute_mh.py` | `mh_distribution.parquet` from `ole_computed.parquet` | Man-hours formula (NVA, Lunch, MFG DT, Downtime, MFG Hour Lost) changed |
+
+All single-step commands read existing upstream parquet and rewrite only their own output. None touch raw data, ingest state, or other marts.
+
+### Forcing a clean reset
+
+```bash
+# Re-ingest everything visible on the share + recompute all marts:
+python pipeline/refresh.py --full
+
+# Drop the watermark and rebuild incrementally from DATE_FROM (config.py):
+rm data/mart/.ingest_state.json
+python pipeline/refresh.py
+```
 
 ## Start the API
 

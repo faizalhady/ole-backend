@@ -338,15 +338,27 @@ def run(mode: str = "incremental", progress_cb=None,
         log.info("Full fetch: no date filter (all records)")
 
     # Filter customer list by --only / --exclude.
-    only_set    = {c.lower() for c in only}    if only    else None
-    exclude_set = {c.lower() for c in exclude} if exclude else None
-    customers = [
-        c for c in CT_CUSTOMERS
-        if (only_set is None or c["customer"].lower() in only_set)
-        and (exclude_set is None or c["customer"].lower() not in exclude_set)
-    ]
-    if only:    log.info(f"Filter --only:    {only}    → {len(customers)} customer(s) selected")
-    if exclude: log.info(f"Filter --exclude: {exclude} → {len(customers)} customer(s) remaining")
+    # When --only is given, we preserve the ORDER the user typed them in so
+    # callers can deliberately run smallest → biggest (or any order they want).
+    # --exclude doesn't reorder.
+    by_name = {c["customer"].lower(): c for c in CT_CUSTOMERS}
+    if only:
+        seen = set()
+        customers = []
+        for name in only:
+            cfg = by_name.get(name.lower())
+            if cfg and cfg["customer"].lower() not in seen:
+                customers.append(cfg)
+                seen.add(cfg["customer"].lower())
+        log.info(f"Filter --only:    {only}    → {len(customers)} customer(s) selected (in --only order)")
+    else:
+        exclude_set = {c.lower() for c in exclude} if exclude else None
+        customers = [
+            c for c in CT_CUSTOMERS
+            if exclude_set is None or c["customer"].lower() not in exclude_set
+        ]
+        if exclude:
+            log.info(f"Filter --exclude: {exclude} → {len(customers)} customer(s) remaining")
 
     SHARDS_DIR.mkdir(parents=True, exist_ok=True)
     failed: list[str] = []

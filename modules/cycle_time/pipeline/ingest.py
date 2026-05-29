@@ -155,9 +155,11 @@ def _fetch_customer_resumable(
     shard_dir = SHARDS_DIR / slug
     state = _load_shard_state(customer)
 
-    # --full wipes any previous shard for this customer
-    if full and shard_dir.exists() and state["last_completed_page"] > 0:
-        log.info(f"  → {customer} ({division})  [--full] wiping existing shard ({state['rows']:,} rows)")
+    # --full wipes COMPLETE shards (force re-fetch) but always resumes
+    # PARTIAL shards — we never throw away in-flight pages, even with --full.
+    # If you really want to restart a partial, delete the shard folder by hand.
+    if full and shard_dir.exists() and state["complete"]:
+        log.info(f"  → {customer} ({division})  [--full] wiping completed shard ({state['rows']:,} rows) to re-fetch")
         shutil.rmtree(shard_dir)
         state = {"last_completed_page": 0, "total_count": None, "complete": False, "rows": 0}
 

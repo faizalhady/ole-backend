@@ -298,6 +298,9 @@ def ct_live(
         .reset_index()
     )
     pivoted.columns.name = None
+    # Drop alias columns that ended up entirely null after the per-page pivot —
+    # same rationale as /data.
+    pivoted = pivoted.dropna(axis=1, how="all")
 
     # Build alias_map from this page's rows.
     alias_map: dict[str, dict[str, list[str]]] = {}
@@ -391,6 +394,11 @@ def ct_data(
         df = con.execute(
             f"SELECT * FROM ct_pivoted {where} ORDER BY customer, assembly, revision"
         ).df()
+        # Drop alias columns that are entirely null in the filtered result so
+        # we don't ship 800+ empty fields per row for a single-customer query.
+        # Metadata cols (customer, assembly, …) always have values so they're
+        # safe — dropna only removes truly empty columns.
+        df = df.dropna(axis=1, how="all")
         return _df_to_json(df)
     finally:
         con.close()

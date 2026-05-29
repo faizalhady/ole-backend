@@ -73,6 +73,18 @@ def run() -> bool:
     # ── Ensure numeric value col ──────────────────────────────────────────────
     df[_VALUE_COL] = pd.to_numeric(df[_VALUE_COL], errors="coerce")
 
+    # ── Pivot col fallback: alias → process when alias is null ────────────────
+    # Some customers (e.g. DYSON, ADVA) don't populate the Alias field in IEDB.
+    # Without this fallback their rows would have no column to land in and the
+    # whole customer would be silently dropped from pivoted.parquet.
+    if _PROCESS_COL == "alias" and "process" in df.columns:
+        n_null_alias = df["alias"].isna().sum()
+        if n_null_alias > 0:
+            log.info(f"Filling {n_null_alias:,} null aliases with their process code "
+                     f"(affects customers: "
+                     f"{sorted(df.loc[df['alias'].isna(), 'customer'].dropna().unique().tolist())})")
+            df["alias"] = df["alias"].fillna(df["process"])
+
     # ── Pivot: process rows → columns ─────────────────────────────────────────
     # aggfunc='first': if an assembly/sub_wc/process combination appears more than
     # once (e.g. duplicate entries), take the first occurrence.

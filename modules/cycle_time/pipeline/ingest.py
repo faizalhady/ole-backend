@@ -16,14 +16,30 @@ Modes:
 import json
 import logging
 import re
+import shutil
 from datetime import datetime
+from pathlib import Path
 
 import pandas as pd
 
-from modules.cycle_time.client import fetch_all_pages
-from modules.cycle_time.config import CT_CUSTOMERS, CT_MART, CT_MART_DIR, CT_STATE_FILE
+from modules.cycle_time.client import fetch_all_pages, fetch_page
+from modules.cycle_time.config import CT_CUSTOMERS, CT_MART, CT_MART_DIR, CT_STATE_FILE, PAGE_SIZE
 
 log = logging.getLogger(__name__)
+
+# ─── Per-customer shard layout ────────────────────────────────────────────────
+# Each customer writes pages to its own folder; the page parquet is the unit
+# of durable progress. Crash / timeout mid-customer keeps all completed pages.
+#
+#   data/mart/cycle_time/raw_shards/
+#     ASP/
+#       page_0001.parquet
+#       page_0002.parquet
+#       ...
+#       .state.json     { "last_completed_page": N, "total_count": T, "complete": true|false, "rows": M }
+#
+# At the end of run(), all complete shards are concatenated into raw.parquet.
+SHARDS_DIR = CT_MART_DIR / "raw_shards"
 
 # ─── Column name normalisation ────────────────────────────────────────────────
 # API returns camelCase JSON keys → convert to snake_case for parquet storage.
@@ -85,23 +101,212 @@ def _upsert(existing: pd.DataFrame, new: pd.DataFrame) -> pd.DataFrame:
 
 # ─── Core ingest ──────────────────────────────────────────────────────────────
 
+def _customer_slug(customer: str) -> str:
+    """Filesystem-safe shard directory name."""
+    return re.sub(r"[^A-Za-z0-9_-]+", "_", customer).strip("_")
+
+
+def _shard_state_path(customer: str) -> Path:
+    return SHARDS_DIR / _customer_slug(customer) / ".state.json"
+
+
+def _load_shard_state(customer: str) -> dict:
+    p = _shard_state_path(customer)
+    if not p.exists():
+        return {"last_completed_page": 0, "total_count": None, "complete": False, "rows": 0}
+    try:
+        return json.loads(p.read_text())
+    except Exception as e:
+        log.warning(f"  Shard state unreadable for {customer} ({e}) — starting fresh")
+        return {"last_completed_page": 0, "total_count": None, "complete": False, "rows": 0}
+
+
+def _save_shard_state(customer: str, state: dict) -> None:
+    p = _shard_state_path(customer)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(state, indent=2))
+
+
+def _normalise_page_df(records: list[dict], customer: str, division: str) -> pd.DataFrame:
+    """Page records → snake_cased DataFrame with provenance tags."""
+    df = pd.DataFrame(records)
+    df.columns = [_camel_to_snake(c) for c in df.columns]
+    df["_customer"] = customer
+    df["_division"] = division
+    return df
+
+
+def _fetch_customer_resumable(
+    customer: str,
+    division: str,
+    begin_date: str | None,
+    full: bool,
+) -> bool:
+    """
+    Fetch a customer in resumable per-page chunks.
+      - Each page written to raw_shards/{slug}/page_{n:04d}.parquet immediately
+      - .state.json updated after each successful page write
+      - On --full + no existing shard: fresh fetch
+      - On --full + existing shard: WIPED first, then fresh fetch
+      - On --incremental: resumes from last_completed_page + 1
+      - Returns True if customer fully complete, False on partial (timeout etc.)
+    """
+    slug = _customer_slug(customer)
+    shard_dir = SHARDS_DIR / slug
+    state = _load_shard_state(customer)
+
+    # --full wipes any previous shard for this customer
+    if full and shard_dir.exists() and state["last_completed_page"] > 0:
+        log.info(f"  → {customer} ({division})  [--full] wiping existing shard ({state['rows']:,} rows)")
+        shutil.rmtree(shard_dir)
+        state = {"last_completed_page": 0, "total_count": None, "complete": False, "rows": 0}
+
+    if state["complete"]:
+        log.info(f"  → {customer} ({division})  already complete ({state['rows']:,} rows) — skipping")
+        return True
+
+    shard_dir.mkdir(parents=True, exist_ok=True)
+    start_page = state["last_completed_page"] + 1
+    if start_page > 1:
+        log.info(f"  → {customer} ({division})  resuming from page {start_page} "
+                 f"({state['rows']:,} rows already on disk)")
+    else:
+        log.info(f"  → {customer} ({division})")
+
+    page = start_page
+    rows_added = 0
+    while True:
+        try:
+            batch = fetch_page(customer, division, page, PAGE_SIZE, begin_date)
+        except Exception as e:
+            log.error(f"      FAILED at page {page}: {e}")
+            log.error(f"      kept {state['rows']:,} rows on disk; resume next run")
+            return False
+
+        if not batch:
+            # Empty page — we're done (no more data).
+            state["complete"] = True
+            _save_shard_state(customer, state)
+            log.info(f"      complete: {state['rows']:,} rows total")
+            return True
+
+        # Write the page atomically: write to .tmp then rename.
+        df = _normalise_page_df(batch, customer, division)
+        page_path = shard_dir / f"page_{page:04d}.parquet"
+        tmp_path  = shard_dir / f"page_{page:04d}.parquet.tmp"
+        df.to_parquet(tmp_path, index=False)
+        tmp_path.replace(page_path)
+
+        # Update state AFTER the page is durable.
+        if state["total_count"] is None:
+            tc = batch[0].get("totalCount") or batch[0].get("TotalCount")
+            if tc is not None:
+                state["total_count"] = int(tc)
+        state["last_completed_page"] = page
+        state["rows"] += len(df)
+        _save_shard_state(customer, state)
+        rows_added += len(df)
+
+        # Termination: known total reached, or short page.
+        if state["total_count"] is not None and state["rows"] >= state["total_count"]:
+            state["complete"] = True
+            _save_shard_state(customer, state)
+            log.info(f"      complete: {state['rows']:,} / {state['total_count']:,} rows")
+            return True
+        if len(batch) < PAGE_SIZE:
+            state["complete"] = True
+            _save_shard_state(customer, state)
+            log.info(f"      complete: {state['rows']:,} rows (short final page)")
+            return True
+
+        # Periodic progress for big customers — every 10 pages.
+        if page % 10 == 0:
+            tc = state["total_count"]
+            pct = f"{state['rows'] / tc * 100:.1f}%" if tc else "?"
+            log.info(f"      page {page} done — {state['rows']:,} rows ({pct})")
+        page += 1
+
+
+def backfill_shards_from_raw() -> int:
+    """One-shot: split an existing raw.parquet into per-customer shards so
+    future resumable runs preserve already-ingested customers. Idempotent —
+    if a customer's shard is already marked complete, it's left alone."""
+    if not CT_MART["raw"].exists():
+        log.info("No raw.parquet to backfill from.")
+        return 0
+    raw = pd.read_parquet(CT_MART["raw"])
+    if raw.empty or "customer" not in raw.columns:
+        log.warning("raw.parquet has no customer column — cannot backfill.")
+        return 0
+    SHARDS_DIR.mkdir(parents=True, exist_ok=True)
+    n_backfilled = 0
+    for customer in sorted(raw["customer"].dropna().unique()):
+        existing = _load_shard_state(customer)
+        if existing["complete"]:
+            continue
+        sub = raw[raw["customer"] == customer]
+        if sub.empty:
+            continue
+        slug = _customer_slug(customer)
+        shard_dir = SHARDS_DIR / slug
+        shard_dir.mkdir(parents=True, exist_ok=True)
+        sub.to_parquet(shard_dir / "page_0001.parquet", index=False)
+        _save_shard_state(customer, {
+            "last_completed_page": 1,
+            "total_count": len(sub),
+            "complete": True,
+            "rows": len(sub),
+            "backfilled_from_raw": True,
+        })
+        n_backfilled += 1
+        log.info(f"  backfilled {customer}: {len(sub):,} rows")
+    log.info(f"Backfilled {n_backfilled} customer(s) into shards.")
+    return n_backfilled
+
+
+def _merge_all_shards_to_raw() -> int:
+    """Concat every customer's shard pages into a single raw.parquet.
+    Returns total rows written."""
+    if not SHARDS_DIR.exists():
+        log.warning("No shards directory — nothing to merge")
+        return 0
+
+    parts: list[pd.DataFrame] = []
+    total = 0
+    for cust_dir in sorted(SHARDS_DIR.iterdir()):
+        if not cust_dir.is_dir():
+            continue
+        pages = sorted(cust_dir.glob("page_*.parquet"))
+        if not pages:
+            continue
+        for p in pages:
+            df = pd.read_parquet(p)
+            parts.append(df)
+            total += len(df)
+
+    if not parts:
+        log.warning("Shards directory has no page parquets")
+        return 0
+
+    merged = pd.concat(parts, ignore_index=True)
+    merged.to_parquet(CT_MART["raw"], index=False)
+    log.info(f"raw.parquet written: {len(merged):,} rows ← merge of {len(parts)} shard pages")
+    return len(merged)
+
+
 def _fetch_customer(
     customer: str,
     division: str,
     begin_date: str | None,
 ) -> pd.DataFrame:
+    """Legacy in-memory fetch — kept for backwards-compat with the live router.
+    The pipeline run() path uses _fetch_customer_resumable instead."""
     log.info(f"  → {customer} ({division})")
     records = fetch_all_pages(customer, division, begin_date=begin_date)
     if not records:
         log.info(f"      no records returned")
         return pd.DataFrame()
-
-    df = pd.DataFrame(records)
-    # Normalise column names camelCase → snake_case
-    df.columns = [_camel_to_snake(c) for c in df.columns]
-    # Tag with customer/division so we know the source in the parquet
-    df["_customer"] = customer
-    df["_division"] = division
+    df = _normalise_page_df(records, customer, division)
     log.info(f"      {len(df)} records")
     return df
 
@@ -141,64 +346,56 @@ def run(mode: str = "incremental", progress_cb=None,
     if only:    log.info(f"Filter --only:    {only}    → {len(customers)} customer(s) selected")
     if exclude: log.info(f"Filter --exclude: {exclude} → {len(customers)} customer(s) remaining")
 
-    frames: list[pd.DataFrame] = []
+    SHARDS_DIR.mkdir(parents=True, exist_ok=True)
     failed: list[str] = []
+    partial: list[str] = []
+    complete: list[str] = []
     total = len(customers)
+    is_full = (mode == "full")
 
     for i, cust in enumerate(customers, start=1):
         if progress_cb:
-            try:
-                progress_cb(cust["customer"], i - 1, total)
-            except Exception:
-                pass
+            try: progress_cb(cust["customer"], i - 1, total)
+            except Exception: pass
         try:
-            df = _fetch_customer(cust["customer"], cust["division"], begin_date)
-            if not df.empty:
-                frames.append(df)
+            ok = _fetch_customer_resumable(
+                customer  = cust["customer"],
+                division  = cust["division"],
+                begin_date= begin_date,
+                full      = is_full,
+            )
+            (complete if ok else partial).append(cust["customer"])
         except Exception as e:
-            log.error(f"  FAILED {cust['customer']}: {e}")
+            log.error(f"  CRASHED {cust['customer']}: {e}")
             failed.append(cust["customer"])
         if progress_cb:
-            try:
-                progress_cb(None, i, total)
-            except Exception:
-                pass
+            try: progress_cb(None, i, total)
+            except Exception: pass
 
-    if not frames:
-        log.warning("No data fetched from any customer.")
-        if failed:
-            log.error(f"Failed customers: {failed}")
+    # Merge all shards (including any from prior runs not in this customer list)
+    # into raw.parquet.
+    total_rows = _merge_all_shards_to_raw()
+
+    if total_rows == 0:
+        log.warning("No data on disk after this run.")
+        if failed:  log.error(f"Crashed customers:  {failed}")
+        if partial: log.error(f"Partial customers:  {partial}")
         return False
 
-    new_df = pd.concat(frames, ignore_index=True)
-    log.info(f"Fetched {len(new_df)} total rows across {len(frames)} customers")
-
-    # Merge with existing parquet
-    if mode == "incremental" and CT_MART["raw"].exists():
-        try:
-            existing = pd.read_parquet(CT_MART["raw"])
-            final_df = _upsert(existing, new_df)
-        except Exception as e:
-            log.warning(f"Could not read existing raw.parquet ({e}); overwriting.")
-            final_df = new_df
-    else:
-        final_df = new_df
-
-    final_df.to_parquet(CT_MART["raw"], index=False)
-    log.info(f"raw.parquet written: {len(final_df)} rows → {CT_MART['raw']}")
-
-    # Persist state
+    # Persist top-level state
     now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     state.update({
-        "last_run_date":      now,
-        "last_run_mode":      mode,
-        "total_rows":         len(final_df),
+        "last_run_date":     now,
+        "last_run_mode":     mode,
+        "total_rows":        total_rows,
+        "complete_customers": complete,
+        "partial_customers":  partial,
         "failed_customers":   failed,
-        "customers_fetched":  len(frames),
     })
     _save_state(state)
 
-    if failed:
-        log.warning(f"Completed with failures: {failed}")
+    log.info(f"Complete: {len(complete)} | Partial (resume next run): {len(partial)} | Crashed: {len(failed)}")
+    if partial: log.warning(f"Partial customers will resume on next --incremental: {partial}")
+    if failed:  log.error  (f"Crashed customers (need investigation): {failed}")
     log.info("CYCLE TIME INGEST  complete")
     return True

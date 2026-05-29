@@ -1,9 +1,10 @@
 from pathlib import Path
 
+from core.paths import PROJECT_ROOT, DATA_RAW_DIR, DATA_MART_DIR  # noqa: F401  re-exported
+
 # ─── Paths ────────────────────────────────────────────────────────────────────
-BASE_DIR         = Path(__file__).parent
-DATA_RAW_DIR     = BASE_DIR / "data" / "raw"
-DATA_MART_DIR    = BASE_DIR / "data" / "mart"
+# BASE_DIR kept as project root for any consumer that still imports it.
+BASE_DIR = PROJECT_ROOT
 
 # Network share where MES and eTMS CSVs are exported to
 # Recent files land in NETWORK_PATH directly; older/archived files are in RawData/
@@ -129,13 +130,17 @@ ACTIVE_ENTITIES = list(WORKCELL_CONFIG.keys()) + list(INDIRECT_LABOR_CONFIG.keys
 DATE_FROM = "2025-01-01"
 
 # ─── Mart filenames ───────────────────────────────────────────────────────────
+# OLE module parquets live under data/mart/ole/ (sibling of data/mart/cycle_time/).
+OLE_MART_DIR = DATA_MART_DIR / "ole"
+OLE_MART_DIR.mkdir(parents=True, exist_ok=True)
+
 MART = {
-    "production":      DATA_MART_DIR / "raw_production.parquet",
-    "paid_hours":      DATA_MART_DIR / "raw_paid_hours.parquet",
-    "smh":             DATA_MART_DIR / "smh_lookup.parquet",
-    "ole":             DATA_MART_DIR / "ole_computed.parquet",
-    "smh_status":      DATA_MART_DIR / "smh_assembly_status.parquet",
-    "ole_weekly":      DATA_MART_DIR / "ole_weekly.parquet",
-    "indirect_labor":  DATA_MART_DIR / "indirect_labor.parquet",
-    "mh_distribution": DATA_MART_DIR / "mh_distribution.parquet",
+    "production":      OLE_MART_DIR / "raw_production.parquet",
+    "paid_hours":      OLE_MART_DIR / "raw_paid_hours.parquet",
+    "smh":             OLE_MART_DIR / "smh_lookup.parquet",
+    "ole":             OLE_MART_DIR / "ole_computed.parquet",
+    "smh_status":      OLE_MART_DIR / "smh_assembly_status.parquet",
+    "ole_weekly":      OLE_MART_DIR / "ole_weekly.parquet",
+    "indirect_labor":  OLE_MART_DIR / "indirect_labor.parquet",
+    "mh_distribution": OLE_MART_DIR / "mh_distribution.parquet",
 }

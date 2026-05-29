@@ -16,13 +16,13 @@ used for the VA/NVA split display — never for the OLE denominator.
 
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 import logging
 import duckdb
 import pandas as pd
 
-from config import MART, WORKCELL_CONFIG, INDIRECT_LABOR_CONFIG
+from modules.ole.config import MART, WORKCELL_CONFIG, INDIRECT_LABOR_CONFIG
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)s  %(message)s")
 log = logging.getLogger(__name__)

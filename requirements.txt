@@ -1,12 +1,24 @@
-fastapi==0.115.0
-uvicorn==0.30.6
-duckdb==1.1.1
-pandas==2.2.3
-openpyxl==3.1.5
-xlrd==2.0.1
-beautifulsoup4==4.12.3
-lxml==5.3.0
-pyarrow==18.1.0
-python-dateutil==2.9.0
-setuptools==82.0.1
-statsmodels==0.14.4
+# ─── Web framework ───────────────────────────────────────────────
+fastapi==0.135.1
+uvicorn==0.38.0
+
+# ─── Data engine ─────────────────────────────────────────────────
+duckdb==1.4.4
+pandas==2.3.2
+pyarrow==23.0.0
+
+# ─── File format support ─────────────────────────────────────────
+openpyxl==3.1.5         # .xlsx read/write (OLE SMH files, exports)
+beautifulsoup4==4.13.5  # HTML parsing for SMH HTML-disguised .xls
+lxml==6.0.2             # BeautifulSoup parser
+
+# ─── Utilities ───────────────────────────────────────────────────
+python-dateutil==2.9.0.post0
+setuptools==80.9.0
+
+# ─── OLE forecasting (predict endpoint) ──────────────────────────
+statsmodels==0.14.6
+
+# ─── Cycle Time module ───────────────────────────────────────────
+requests==2.32.5        # IEDB3.0 HTTP client
+python-dotenv==1.2.1    # .env loading for IEDB_CLIENT_KEY

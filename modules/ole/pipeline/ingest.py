@@ -21,7 +21,7 @@ Outputs  (data/mart/)
 
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 import re
 import json
@@ -31,7 +31,7 @@ from datetime import datetime
 import pandas as pd
 from bs4 import BeautifulSoup
 
-from config import (
+from modules.ole.config import (
     NETWORK_PATH,
     RAWDATA_PATH,
     DATA_MART_DIR,

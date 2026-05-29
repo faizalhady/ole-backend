@@ -42,13 +42,13 @@ weekly paid-hour variation.
 
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 import logging
 import pandas as pd
 
-from config import MART
-from database import get_conn
+from modules.ole.config import MART
+from core.database import get_conn
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)s  %(message)s")
 log = logging.getLogger(__name__)

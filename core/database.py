@@ -12,9 +12,10 @@ The SQLite file lives at data/operational.db and persists across restarts.
 """
 
 import sqlite3
-from pathlib import Path
 
-DB_PATH = Path(__file__).parent / "data" / "operational.db"
+from core.paths import DATA_DIR
+
+DB_PATH = DATA_DIR / "operational.db"
 
 
 def get_conn() -> sqlite3.Connection:

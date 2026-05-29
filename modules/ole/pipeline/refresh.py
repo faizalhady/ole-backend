@@ -26,16 +26,16 @@ Steps
 
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 import argparse
 import logging
 from datetime import datetime
 
-from pipeline.ingest         import run as run_ingest
-from pipeline.compute        import run as run_compute
-from pipeline.compute_weekly import run as run_compute_weekly
-from pipeline.compute_mh     import run as run_compute_mh
+from modules.ole.pipeline.ingest         import run as run_ingest
+from modules.ole.pipeline.compute        import run as run_compute
+from modules.ole.pipeline.compute_weekly import run as run_compute_weekly
+from modules.ole.pipeline.compute_mh     import run as run_compute_mh
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)s  %(message)s")
 log = logging.getLogger(__name__)

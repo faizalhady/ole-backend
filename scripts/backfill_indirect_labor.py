@@ -25,18 +25,18 @@ Usage:
 
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import logging
 import pandas as pd
 
-from config import (
+from modules.ole.config import (
     MART,
     RAWDATA_PATH,
     PAID_HOURS_RAW_PREFIX,
     INDIRECT_LABOR_CONFIG,
 )
-from pipeline.ingest import (
+from modules.ole.pipeline.ingest import (
     _find_csv_files,
     _active_raw_names,
     _normalise_workcell,

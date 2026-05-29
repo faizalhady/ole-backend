@@ -3,7 +3,7 @@
   Register the two daily OLE pipeline scheduled tasks.
 
 .DESCRIPTION
-  Creates / updates two Windows scheduled tasks that call pipeline/refresh.py:
+  Creates / updates two Windows scheduled tasks that call modules/ole/pipeline/refresh.py:
 
     IEPulse-OLE-Ingest-PaidHours    10:45  - 5 min after paid-hours upload (10:40)
     IEPulse-OLE-Ingest-Production   13:05  - 5 min after production upload (13:00)
@@ -18,9 +18,9 @@
   tasks with the same names are replaced.
 
 .NOTES
-  - Place this script in the project root (alongside pipeline/, venv/).
+  - This script lives in scripts/ and resolves the project root one level up.
   - Run from an ELEVATED PowerShell prompt:
-        .\setup_scheduled_tasks.ps1
+        .\scripts\setup_scheduled_tasks.ps1
   - Logon mode: Password - tasks run whether the user is logged on or not.
     You will be prompted ONCE for your Windows username + password; the
     credential is stored encrypted in Windows Task Scheduler.
@@ -28,13 +28,12 @@
 
 $ErrorActionPreference = "Stop"
 
-# Resolve absolute paths relative to where this script lives.
-$Root      = Split-Path -Parent $MyInvocation.MyCommand.Path
+# Resolve project root: scripts/ lives one level under the project root.
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$Root      = Split-Path -Parent $ScriptDir
 $PythonExe = Join-Path $Root "venv\Scripts\python.exe"
-$RefreshPy = Join-Path $Root "pipeline\refresh.py"
 
 if (-not (Test-Path $PythonExe)) { throw "venv python not found: $PythonExe" }
-if (-not (Test-Path $RefreshPy)) { throw "refresh.py not found:    $RefreshPy" }
 
 # Prompt ONCE for the credentials the tasks should run as.
 # Use your own Windows login (e.g. jabil\4033375). It needs access to the
@@ -56,7 +55,7 @@ function Register-OleTask {
 
     $action = New-ScheduledTaskAction `
         -Execute $PythonExe `
-        -Argument "`"$RefreshPy`"" `
+        -Argument "-m modules.ole.pipeline.refresh" `
         -WorkingDirectory $Root
 
     $trigger = New-ScheduledTaskTrigger -Daily -At $Time

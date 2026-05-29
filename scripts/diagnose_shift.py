@@ -14,15 +14,15 @@ Example:
 
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pandas as pd
-from config import (
+from modules.ole.config import (
     NETWORK_PATH, RAWDATA_PATH, MART,
     PRODUCTION_PREFIX, PAID_HOURS_RAW_PREFIX,
     WORKCELL_CONFIG, DATE_FROM,
 )
-from pipeline.ingest import _WORKCELL_MAP, _normalise_workcell
+from modules.ole.pipeline.ingest import _WORKCELL_MAP, _normalise_workcell
 
 
 def banner(title):

@@ -20,3 +20,6 @@ data/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Reference files (kept locally, not part of the codebase)
+iedb_auth_service.cs

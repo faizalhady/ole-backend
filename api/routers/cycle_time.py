@@ -364,6 +364,188 @@ def ct_aliases(customer: Optional[str] = Query(None, description="Scope by custo
     return out
 
 
+@router.get("/profile")
+def ct_profile(
+    customer: str = Query(..., description="Workcell/customer name — must match a /customers entry"),
+    pareto_limit: int = Query(20, ge=5, le=60, description="Max processes in the Pareto"),
+    top_limit:    int = Query(10, ge=5, le=50, description="Max assemblies in the 'longest builds' list"),
+):
+    """
+    Workcell profile — the analytical 'story' for one customer, computed from raw.parquet.
+
+    A *build* is one (assembly, revision, sub_workcenter) — the unit that has a
+    coherent ordered process routing and a meaningful total cycle time. We never
+    average cycle time across unlike assemblies (that's noise); instead the headline
+    is the **bottleneck**: which process constrains the most builds.
+
+      → {
+          "customer": "ASP",
+          "summary": { assemblies, builds, lines, processes, revisions, avg_fpy,
+                       updated_on, bottleneck: {alias, process, builds_bottlenecked, total_builds, pct} },
+          "bottleneck_pareto": [ {alias, process, builds_bottlenecked, pct}, ... ],
+          "process_pareto":    [ {alias, process, occurrences, avg_seconds, total_seconds, avg_hc}, ... ],
+          "lines":             [ {sub_workcenter, builds, assemblies, avg_build_seconds, total_hc}, ... ],
+          "top_assemblies":    [ {assembly, revision, sub_workcenter, total_seconds, n_processes,
+                                  total_hc, avg_fpy, bottleneck_alias}, ... ]
+        }
+    """
+    if not CT_MART["raw"].exists():
+        raise HTTPException(
+            status_code=503,
+            detail="Cycle Time raw.parquet not found. Run /api/cycle-time/refresh first.",
+        )
+
+    con = _con()
+    try:
+        _load_parquet(con, "raw", "ct_raw")
+
+        # Guard: does this customer have any rows?
+        n = con.execute("SELECT COUNT(*) FROM ct_raw WHERE customer = ?", [customer]).fetchone()[0]
+        if n == 0:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No cycle-time data for customer '{customer}'. "
+                       f"It may not be ingested yet, or has no cycle times entered in IEDB.",
+            )
+
+        # A 'build key' groups one assembly+revision+line — the routing unit.
+        BUILD = "assembly || '' || revision || '' || sub_workcenter"
+
+        # ── Summary counts ────────────────────────────────────────────────────
+        summary = con.execute(
+            f"""
+            SELECT
+              COUNT(DISTINCT assembly)              AS assemblies,
+              COUNT(DISTINCT sub_workcenter)        AS lines,
+              COUNT(DISTINCT alias)                 AS processes,
+              COUNT(DISTINCT revision)              AS revisions,
+              COUNT(DISTINCT ({BUILD}))             AS builds,
+              AVG(fpy)                              AS avg_fpy,
+              MAX(updated_on)                       AS updated_on
+            FROM ct_raw WHERE customer = ?
+            """,
+            [customer],
+        ).df()
+        summary_row = _df_to_json(summary)[0]
+        total_builds = int(summary_row["builds"] or 0)
+
+        # ── Bottleneck per build → the hero insight ───────────────────────────
+        # For each build, the process with the largest cycle time is its bottleneck.
+        # Count how often each process is the bottleneck across all builds.
+        bottleneck_df = con.execute(
+            f"""
+            WITH ranked AS (
+              SELECT alias, process,
+                     ROW_NUMBER() OVER (
+                       PARTITION BY {BUILD}
+                       ORDER BY cycle_time_per_process DESC NULLS LAST
+                     ) AS rn
+              FROM ct_raw WHERE customer = ?
+            )
+            SELECT alias,
+                   ANY_VALUE(process)  AS process,
+                   COUNT(*)            AS builds_bottlenecked
+            FROM ranked WHERE rn = 1
+            GROUP BY alias
+            ORDER BY builds_bottlenecked DESC
+            """,
+            [customer],
+        ).df()
+        bottleneck_rows = _df_to_json(bottleneck_df)
+        for r in bottleneck_rows:
+            r["pct"] = round(100 * (r["builds_bottlenecked"] or 0) / total_builds, 1) if total_builds else 0.0
+
+        hero = None
+        if bottleneck_rows:
+            top = bottleneck_rows[0]
+            hero = {
+                "alias":               top["alias"],
+                "process":             top["process"],
+                "builds_bottlenecked": top["builds_bottlenecked"],
+                "total_builds":        total_builds,
+                "pct":                 top["pct"],
+            }
+        summary_row["bottleneck"] = hero
+
+        # ── Process Pareto (by total time contribution) ───────────────────────
+        process_pareto = _df_to_json(con.execute(
+            """
+            SELECT alias,
+                   ANY_VALUE(process)            AS process,
+                   COUNT(*)                      AS occurrences,
+                   AVG(cycle_time_per_process)   AS avg_seconds,
+                   SUM(cycle_time_per_process)   AS total_seconds,
+                   AVG(hc)                       AS avg_hc
+            FROM ct_raw WHERE customer = ?
+            GROUP BY alias
+            ORDER BY total_seconds DESC NULLS LAST
+            LIMIT ?
+            """,
+            [customer, pareto_limit],
+        ).df())
+
+        # ── Lines (sub_workcenter) summary ────────────────────────────────────
+        lines = _df_to_json(con.execute(
+            f"""
+            WITH build_tot AS (
+              SELECT sub_workcenter, assembly, revision,
+                     SUM(cycle_time_per_process) AS tot,
+                     SUM(hc)                     AS hc
+              FROM ct_raw WHERE customer = ?
+              GROUP BY sub_workcenter, assembly, revision
+            )
+            SELECT sub_workcenter,
+                   COUNT(*)                 AS builds,
+                   COUNT(DISTINCT assembly) AS assemblies,
+                   AVG(tot)                 AS avg_build_seconds,
+                   AVG(hc)                  AS avg_build_hc
+            FROM build_tot
+            GROUP BY sub_workcenter
+            ORDER BY builds DESC
+            """,
+            [customer],
+        ).df())
+
+        # ── Top assemblies by total build time (with their bottleneck) ────────
+        top_assemblies = _df_to_json(con.execute(
+            f"""
+            WITH per_proc AS (
+              SELECT assembly, revision, sub_workcenter, alias, fpy, hc, cycle_time_per_process,
+                     ROW_NUMBER() OVER (
+                       PARTITION BY {BUILD}
+                       ORDER BY cycle_time_per_process DESC NULLS LAST
+                     ) AS rn
+              FROM ct_raw WHERE customer = ?
+            ),
+            agg AS (
+              SELECT assembly, revision, sub_workcenter,
+                     SUM(cycle_time_per_process) AS total_seconds,
+                     COUNT(*)                    AS n_processes,
+                     SUM(hc)                     AS total_hc,
+                     AVG(fpy)                    AS avg_fpy,
+                     MAX(CASE WHEN rn = 1 THEN alias END) AS bottleneck_alias
+              FROM per_proc
+              GROUP BY assembly, revision, sub_workcenter
+            )
+            SELECT * FROM agg
+            ORDER BY total_seconds DESC NULLS LAST
+            LIMIT ?
+            """,
+            [customer, top_limit],
+        ).df())
+
+        return {
+            "customer":          customer,
+            "summary":           summary_row,
+            "bottleneck_pareto": bottleneck_rows[:pareto_limit],
+            "process_pareto":    process_pareto,
+            "lines":             lines,
+            "top_assemblies":    top_assemblies,
+        }
+    finally:
+        con.close()
+
+
 @router.get("/data")
 def ct_data(
     customer:      Optional[str] = Query(None, description="Filter by customer name"),

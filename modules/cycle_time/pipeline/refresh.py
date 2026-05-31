@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
 from modules.cycle_time.pipeline.ingest    import run as run_ingest
 from modules.cycle_time.pipeline.transform import run as run_transform
+from modules.cycle_time.keep_awake          import keep_system_awake
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)s  %(message)s")
 log = logging.getLogger(__name__)
@@ -41,9 +42,12 @@ def run(mode: str = "incremental",
     log.info("╚══════════════════════════════════════════════════════════╝")
     log.info(f"Started at {start.strftime('%Y-%m-%d %H:%M:%S')}")
 
-    if not run_ingest(mode=mode, only=only, exclude=exclude):
-        log.error("Ingest failed — pipeline aborted.")
-        return False
+    # Keep the machine awake for the whole ingest so a long unattended pull
+    # isn't killed by idle-sleep tearing down the network connection.
+    with keep_system_awake():
+        if not run_ingest(mode=mode, only=only, exclude=exclude):
+            log.error("Ingest failed — pipeline aborted.")
+            return False
 
     if not run_transform():
         log.error("Transform failed — pivoted.parquet not written.")

@@ -206,6 +206,37 @@ def ct_customers():
     return CT_CUSTOMERS
 
 
+@router.get("/coverage")
+def ct_coverage():
+    """
+    Per-customer cycle-time data coverage in ONE pass over raw.parquet:
+      → [ { "customer": "ASP", "assemblies": 337, "updated_on": "2026-06-02..." }, ... ]
+
+    `assemblies` = distinct assemblies that actually have cycle-time data
+    locally (contrast with the catalog total in /customers). Powers the
+    Workcells league table without a per-customer /profile round trip.
+    Returns [] when nothing is ingested yet (mart absent).
+    """
+    if not CT_MART["raw"].exists():
+        return []
+
+    con = _con()
+    try:
+        _load_parquet(con, "raw", "ct_raw")
+        df = con.execute(
+            """
+            SELECT customer,
+                   COUNT(DISTINCT assembly) AS assemblies,
+                   MAX(updated_on)          AS updated_on
+            FROM ct_raw
+            GROUP BY customer
+            """
+        ).df()
+        return _df_to_json(df)
+    finally:
+        con.close()
+
+
 @router.get("/live")
 def ct_live(
     customer:        str = Query(..., description="Customer name (case-sensitive — must match /customers entry)"),
@@ -559,6 +590,29 @@ def ct_profile(
         con.close()
 
 
+_PIVOT_META_COLS = [
+    "customer", "division", "family", "assembly", "revision",
+    "workcenter", "workcenter_type", "sub_workcenter",
+]
+
+
+def _customer_process_columns(con, customer: str) -> list[str]:
+    """
+    The process columns that actually exist for one customer in pivoted.parquet.
+    The pivot names columns by COALESCE(alias, process), so the customer's
+    distinct alias-or-process values from raw == its non-null pivot columns.
+    Cheap (scans raw, distinct) and lets paginated /data ship a STABLE column
+    set across every page (vs per-page dropna, which would shift columns).
+    """
+    _load_parquet(con, "raw", "ct_raw")
+    rows = con.execute(
+        "SELECT DISTINCT COALESCE(alias, process) AS c FROM ct_raw "
+        "WHERE customer = ? AND COALESCE(alias, process) IS NOT NULL",
+        [customer],
+    ).fetchall()
+    return [r[0] for r in rows]
+
+
 @router.get("/data")
 def ct_data(
     customer:      Optional[str] = Query(None, description="Filter by customer name"),
@@ -567,11 +621,20 @@ def ct_data(
     workcenter:    Optional[str] = Query(None, description="Filter by workcenter (e.g. SMT)"),
     sub_workcenter: Optional[str] = Query(None, description="Filter by sub-workcenter"),
     family:        Optional[str] = Query(None, description="Filter by product family"),
+    page:          Optional[int] = Query(None, ge=1, description="1-based page. Omit for the full (unpaginated) array."),
+    page_size:     int = Query(300, ge=1, le=2000, description="Rows per page when paginating."),
 ):
     """
     Returns pivoted Cycle Time data — one row per assembly/revision/sub_workcenter,
-    process steps (BIRTH, SCRB, GLUEB, …) as columns.
-    This is the Image 2 table layout.
+    process steps (BIRTH, SCRB, GLUEB, …) as columns. The Image 2 table layout.
+
+    Two modes:
+      • page omitted → legacy full array (used by Excel export). Trims all-null
+        columns via dropna.
+      • page set     → paginated envelope { page, page_size, total, pages,
+        has_next, columns, rows }. First page paints almost instantly; the FE
+        infinite-scrolls the rest. Columns are the customer's stable set so they
+        don't shift between pages.
     """
     con = _con()
     try:
@@ -584,16 +647,148 @@ def ct_data(
         if workcenter:     clauses.append(f"workcenter = '{workcenter}'")
         if sub_workcenter: clauses.append(f"sub_workcenter = '{sub_workcenter}'")
         if family:         clauses.append(f"family ILIKE '%{family}%'")
-
         where = _build_where(clauses)
+
+        # ── Legacy full fetch (export) ────────────────────────────────────────
+        if page is None:
+            df = con.execute(
+                f"SELECT * FROM ct_pivoted {where} ORDER BY customer, assembly, revision"
+            ).df()
+            df = df.dropna(axis=1, how="all")
+            return _df_to_json(df)
+
+        # ── Paginated ─────────────────────────────────────────────────────────
+        total  = con.execute(f"SELECT COUNT(*) FROM ct_pivoted {where}").fetchone()[0]
+        offset = (page - 1) * page_size
+
+        # Stable, customer-scoped column set (no per-page dropna).
+        pivot_cols = list(con.execute("SELECT * FROM ct_pivoted LIMIT 0").df().columns)
+        if customer:
+            proc_cols = [c for c in _customer_process_columns(con, customer) if c in pivot_cols]
+            sel_cols = [c for c in _PIVOT_META_COLS if c in pivot_cols] + proc_cols
+            sel_sql = ", ".join('"' + c.replace('"', '""') + '"' for c in sel_cols)
+        else:
+            proc_cols = [c for c in pivot_cols if c not in _PIVOT_META_COLS]
+            sel_sql = "*"
+
         df = con.execute(
-            f"SELECT * FROM ct_pivoted {where} ORDER BY customer, assembly, revision"
+            # Fully-unique sort (incl. sub_workcenter) so OFFSET paging is stable
+            # — a non-unique ORDER BY can skip/duplicate rows across pages.
+            f"SELECT {sel_sql} FROM ct_pivoted {where} "
+            f"ORDER BY customer, assembly, revision, sub_workcenter LIMIT {page_size} OFFSET {offset}"
         ).df()
-        # Drop alias columns that are entirely null in the filtered result so
-        # we don't ship 800+ empty fields per row for a single-customer query.
-        # Metadata cols (customer, assembly, …) always have values so they're
-        # safe — dropna only removes truly empty columns.
-        df = df.dropna(axis=1, how="all")
+
+        return {
+            "page":      page,
+            "page_size": page_size,
+            "total":     total,
+            "pages":     -(-total // page_size),   # ceiling division
+            "has_next":  offset + len(df) < total,
+            "columns":   proc_cols,
+            "rows":      _df_to_json(df),
+        }
+    finally:
+        con.close()
+
+
+@router.get("/assemblies")
+def ct_assemblies(
+    customer:       str = Query(..., description="Customer name — must match a /customers entry"),
+    sub_workcenter: Optional[str] = Query(None, description="Optional line filter — scope builds to one line"),
+    assembly:       Optional[str] = Query(None, description="Optional exact assembly — returns just that one (drawer header)"),
+):
+    """
+    Per-assembly cycle-time aggregate for the 'Assembly Analytics' (Breakdown B)
+    view — computed server-side in one pass over raw.parquet so the FE never has
+    to download the full pivoted dataset just to summarise it.
+
+      → [ { assembly, family, builds, avg_total, min_total, max_total, bottleneck }, ... ]
+
+    A unit flows SMT → TH → BE once. Within a workcenter there can be:
+      • distinct operations (e.g. BE = COAT → PACK → POT) — these are different
+        steps of the build and MUST be summed; and
+      • alternative lines running the SAME operation (same process-set) — these
+        must NOT be summed (that multiplies one unit's time by the line count);
+        we keep one representative (the max).
+    So per (assembly, workcenter): group builds by their process-set signature,
+    take the max within each signature (dedupe alt lines), then SUM across the
+    distinct signatures. Assembly cycle time = SMT + TH + BE — one unit start to
+    finish. Bottleneck = the single slowest step. The per-step waterfall in the
+    drawer is fetched on demand via /data?assembly=…
+
+    Pass `sub_workcenter` to scope to one line — only assemblies built on that
+    line are returned, with their stats computed from that line's builds.
+    """
+    if not CT_MART["raw"].exists():
+        raise HTTPException(
+            status_code=503,
+            detail="Cycle Time raw.parquet not found. Run /api/cycle-time/refresh first.",
+        )
+
+    # WHERE customer [AND sub_workcenter] [AND assembly] — applied to both CTEs.
+    where = "WHERE customer = ?"
+    scope = [customer]
+    if sub_workcenter:
+        where += " AND sub_workcenter = ?"
+        scope.append(sub_workcenter)
+    if assembly:
+        where += " AND assembly = ?"
+        scope.append(assembly)
+
+    con = _con()
+    try:
+        _load_parquet(con, "raw", "ct_raw")
+        df = con.execute(
+            f"""
+            WITH bp AS (
+              -- per (build, workcenter): cycle time + a canonical process-set
+              -- signature (sorted, so the same op-set always hashes the same).
+              SELECT assembly, revision, sub_workcenter, workcenter,
+                     SUM(cycle_time_per_process) AS wc_time,
+                     STRING_AGG(DISTINCT COALESCE(alias, process), '|'
+                                ORDER BY COALESCE(alias, process)) AS procset
+              FROM ct_raw {where}
+              GROUP BY assembly, revision, sub_workcenter, workcenter
+            ),
+            rep AS (
+              -- alternative lines/revisions running the SAME operation → one rep.
+              SELECT assembly, workcenter, procset, MAX(wc_time) AS rep_time
+              FROM bp GROUP BY assembly, workcenter, procset
+            ),
+            wc AS (
+              -- sum the DISTINCT operations within each workcenter.
+              SELECT assembly, workcenter, SUM(rep_time) AS wc_total
+              FROM rep GROUP BY assembly, workcenter
+            ),
+            asm AS (
+              SELECT assembly,
+                     SUM(CASE WHEN workcenter = 'SMT' THEN wc_total ELSE 0 END) AS smt,
+                     SUM(CASE WHEN workcenter = 'TH'  THEN wc_total ELSE 0 END) AS th,
+                     SUM(CASE WHEN workcenter = 'BE'  THEN wc_total ELSE 0 END) AS be
+              FROM wc GROUP BY assembly
+            ),
+            bcount AS (
+              SELECT assembly,
+                     COUNT(DISTINCT revision || '|' || sub_workcenter) AS builds
+              FROM bp GROUP BY assembly
+            ),
+            meta AS (
+              SELECT assembly,
+                     ANY_VALUE(family)                                       AS family,
+                     arg_max(COALESCE(alias, process), cycle_time_per_process) AS bottleneck
+              FROM ct_raw {where}
+              GROUP BY assembly
+            )
+            SELECT a.assembly, m.family, b.builds,
+                   (a.smt + a.th + a.be) AS total,
+                   a.smt, a.th, a.be, m.bottleneck
+            FROM asm a
+            JOIN bcount b USING (assembly)
+            JOIN meta m   USING (assembly)
+            ORDER BY total DESC NULLS LAST
+            """,
+            scope + scope,
+        ).df()
         return _df_to_json(df)
     finally:
         con.close()

@@ -20,6 +20,7 @@ from typing import Optional
 
 import duckdb
 import pandas as pd
+import pyarrow.parquet as pq
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 
 from modules.cycle_time.config import CT_CUSTOMERS, CT_MART
@@ -57,7 +58,13 @@ def _get_status_snapshot() -> dict:
 # ─── Helpers (mirrors OLE api/main.py patterns) ───────────────────────────────
 
 def _con():
-    return duckdb.connect()
+    con = duckdb.connect()
+    # Guardrail: cap a single query's working memory. A normal customer-filtered
+    # query uses far less than this, so it's not a throttle — it only forces a
+    # runaway/unfiltered query to spill to disk instead of ballooning the
+    # process (which would take OLE down with it, since it's one app).
+    con.execute("SET memory_limit='1GB'")
+    return con
 
 
 def _load_parquet(con, key: str, alias: str):
@@ -100,20 +107,26 @@ def _build_where(clauses: list[str]) -> str:
 
 @router.get("/health")
 def ct_health():
-    """Check which Cycle Time parquet files exist and their row counts."""
+    """
+    Lightweight readiness probe — safe to poll.
+
+    Tells you: is the service up, are the mart files present, how many rows
+    each has, and whether an ingest is currently running. Row counts come from
+    the parquet FOOTER metadata (a few KB), so NO data is loaded into memory.
+    """
     status = {}
     for key, path in CT_MART.items():
         if path.exists():
             try:
-                df = pd.read_parquet(path, columns=[pd.read_parquet(path).columns[0]])
-                status[key] = {"exists": True, "rows": len(pd.read_parquet(path))}
+                status[key] = {"exists": True, "rows": pq.ParquetFile(path).metadata.num_rows}
             except Exception:
                 status[key] = {"exists": True, "rows": "unknown"}
         else:
             status[key] = {"exists": False, "rows": 0}
     return {
-        "status": "ok" if status.get("pivoted", {}).get("exists") else "not_ready",
-        "mart":   status,
+        "status":  "ok" if status.get("pivoted", {}).get("exists") else "not_ready",
+        "refresh": _get_status_snapshot()["state"],   # idle | running | success | failed
+        "mart":    status,
         "customers_configured": len(CT_CUSTOMERS),
     }
 

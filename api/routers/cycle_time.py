@@ -794,6 +794,101 @@ def ct_assemblies(
         con.close()
 
 
+@router.get("/assembly-list")
+def ct_assembly_list(
+    customer:       str = Query(..., description="Customer name — must match a /customers entry"),
+    sub_workcenter: Optional[str] = Query(None, description="Optional line filter"),
+):
+    """
+    Lightweight per-assembly LIST for the 'Cycle Time by Assembly' page collapsed
+    rows. ONE grouped pass over raw.parquet — no cycle-time math, no string
+    aggregation, no second scan (contrast /assemblies which computes SMT/TH/BE
+    totals). Returns only what the collapsed row renders: identity + a stage
+    footprint. The per-build process detail is fetched on demand via
+    /assembly-builds.
+
+      → [ { assembly, family, builds, has_smt, has_th, has_be }, ... ]
+    """
+    if not CT_MART["raw"].exists():
+        raise HTTPException(
+            status_code=503,
+            detail="Cycle Time raw.parquet not found. Run /api/cycle-time/refresh first.",
+        )
+
+    where = "WHERE customer = ?"
+    scope = [customer]
+    if sub_workcenter:
+        where += " AND sub_workcenter = ?"
+        scope.append(sub_workcenter)
+
+    con = _con()
+    try:
+        _load_parquet(con, "raw", "ct_raw")
+        df = con.execute(
+            f"""
+            SELECT assembly,
+                   ANY_VALUE(family)                                  AS family,
+                   COUNT(DISTINCT revision || '|' || sub_workcenter)  AS builds,
+                   BOOL_OR(workcenter = 'SMT')                        AS has_smt,
+                   BOOL_OR(workcenter = 'TH')                         AS has_th,
+                   BOOL_OR(workcenter = 'BE')                         AS has_be
+            FROM ct_raw {where}
+            GROUP BY assembly
+            ORDER BY assembly
+            """,
+            scope,
+        ).df()
+        return _df_to_json(df)
+    finally:
+        con.close()
+
+
+@router.get("/assembly-builds")
+def ct_assembly_builds(
+    customer:       str = Query(..., description="Customer name — must match a /customers entry"),
+    assembly:       str = Query(..., description="Exact assembly number"),
+    sub_workcenter: Optional[str] = Query(None, description="Optional line filter"),
+):
+    """
+    Per-build process detail for ONE assembly — the expanded-row tables on the
+    'Cycle Time by Assembly' page. Reads raw.parquet scoped to a single assembly
+    (exact match → predicate pushdown), selecting only the five columns the FE
+    needs, so it's far lighter than the wide /data?assembly= pivoted fetch it
+    replaces. The FE groups these long rows into builds (one per
+    revision/line/workcenter).
+
+      → [ { revision, sub_workcenter, workcenter, step, seconds }, ... ]
+    """
+    if not CT_MART["raw"].exists():
+        raise HTTPException(
+            status_code=503,
+            detail="Cycle Time raw.parquet not found. Run /api/cycle-time/refresh first.",
+        )
+
+    where = "WHERE customer = ? AND assembly = ?"
+    scope = [customer, assembly]
+    if sub_workcenter:
+        where += " AND sub_workcenter = ?"
+        scope.append(sub_workcenter)
+
+    con = _con()
+    try:
+        _load_parquet(con, "raw", "ct_raw")
+        df = con.execute(
+            f"""
+            SELECT revision, sub_workcenter, workcenter,
+                   COALESCE(alias, process) AS step,
+                   cycle_time_per_process   AS seconds
+            FROM ct_raw {where}
+            ORDER BY revision, sub_workcenter, workcenter
+            """,
+            scope,
+        ).df()
+        return _df_to_json(df)
+    finally:
+        con.close()
+
+
 @router.get("/raw")
 def ct_raw(
     customer:       Optional[str] = Query(None),

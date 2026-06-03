@@ -874,12 +874,18 @@ def ct_assembly_builds(
     con = _con()
     try:
         _load_parquet(con, "raw", "ct_raw")
+        # Dedupe by (build, step): raw stores one row PER PLAYBOOK (default + each
+        # numbered playbook) with the SAME cycle time, so a naive select triples
+        # the steps. Collapse to one row per step — matches the pivoted table
+        # (which pivots on alias). Cycle time is identical across playbooks, so
+        # MAX returns the true value.
         df = con.execute(
             f"""
             SELECT revision, sub_workcenter, workcenter,
-                   COALESCE(alias, process) AS step,
-                   cycle_time_per_process   AS seconds
+                   COALESCE(alias, process)    AS step,
+                   MAX(cycle_time_per_process) AS seconds
             FROM ct_raw {where}
+            GROUP BY revision, sub_workcenter, workcenter, COALESCE(alias, process)
             ORDER BY revision, sub_workcenter, workcenter
             """,
             scope,

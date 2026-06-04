@@ -104,6 +104,20 @@ def run() -> bool:
     log.info(f"Pivoted: {len(pivoted)} rows | {len(process_cols)} process columns")
     log.info(f"Process columns found: {sorted(process_cols)}")
 
+    # ── Build-level priority ──────────────────────────────────────────────────
+    # priority is process-level (dropped by the pivot) but a build's routing rank
+    # is well-defined as the MIN across its steps (1 = primary route). Merge it
+    # back so the wide table / export can filter to primary builds.
+    if "priority" in df.columns:
+        prio = (
+            df.groupby(index_cols, dropna=False)["priority"]
+            .min()
+            .reset_index()
+            .rename(columns={"priority": "priority"})
+        )
+        pivoted = pivoted.merge(prio, on=index_cols, how="left")
+        log.info("Merged build-level priority (min over steps) onto pivoted rows.")
+
     # ── Write ─────────────────────────────────────────────────────────────────
     pivoted.to_parquet(CT_MART["pivoted"], index=False)
     log.info(f"pivoted.parquet written → {CT_MART['pivoted']}")

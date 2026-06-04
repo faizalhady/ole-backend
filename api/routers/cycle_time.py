@@ -388,9 +388,11 @@ def ct_aliases(customer: Optional[str] = Query(None, description="Scope by custo
     try:
         _load_parquet(con, "raw", "ct_raw")
         where = f"WHERE customer = '{customer}'" if customer else ""
+        # `order` is a SQL keyword → quote it. We carry it so the FE can sort the
+        # wide-table process columns by physical flow (min order per alias).
         df = con.execute(
             f"""
-            SELECT alias, process, sub_workcenter
+            SELECT alias, process, sub_workcenter, "order" AS step_order
             FROM ct_raw
             {where}
             """
@@ -398,13 +400,19 @@ def ct_aliases(customer: Optional[str] = Query(None, description="Scope by custo
     finally:
         con.close()
 
-    out: dict[str, dict[str, list[str]]] = {}
+    out: dict[str, dict] = {}
     if df.empty:
         return out
     for alias, sub in df.dropna(subset=["alias"]).groupby("alias"):
         procs = sorted(sub["process"].dropna().unique().tolist())
         lines = sorted(sub["sub_workcenter"].dropna().unique().tolist())
-        out[str(alias)] = {"processes": procs, "lines": lines}
+        # Canonical sequence position for this alias = its earliest order seen.
+        order = sub["step_order"].dropna()
+        out[str(alias)] = {
+            "processes": procs,
+            "lines": lines,
+            "order": int(order.min()) if not order.empty else None,
+        }
     return out
 
 
@@ -592,7 +600,7 @@ def ct_profile(
 
 _PIVOT_META_COLS = [
     "customer", "division", "family", "assembly", "revision",
-    "workcenter", "workcenter_type", "sub_workcenter",
+    "workcenter", "workcenter_type", "sub_workcenter", "priority",
 ]
 
 
@@ -807,7 +815,17 @@ def ct_assembly_list(
     footprint. The per-build process detail is fetched on demand via
     /assembly-builds.
 
-      → [ { assembly, family, builds, has_smt, has_th, has_be }, ... ]
+    `builds` keeps its original meaning (distinct revision×line) for the existing
+    Assemblies tab. `primary_builds` counts only priority-1 routings (distinct
+    revision at priority 1 — what the new Flow tab shows by default), and
+    `has_alternates` flags assemblies with any priority>1 routing (drives the
+    'show alternate routes' toggle).
+
+    `revisions` = distinct revisions for the assembly (shown in the Assemblies
+    table column).
+
+      → [ { assembly, family, builds, revisions, primary_builds, has_alternates,
+            has_smt, has_th, has_be }, ... ]
     """
     if not CT_MART["raw"].exists():
         raise HTTPException(
@@ -829,6 +847,9 @@ def ct_assembly_list(
             SELECT assembly,
                    ANY_VALUE(family)                                  AS family,
                    COUNT(DISTINCT revision || '|' || sub_workcenter)  AS builds,
+                   COUNT(DISTINCT revision)                           AS revisions,
+                   COUNT(DISTINCT revision) FILTER (WHERE priority = 1) AS primary_builds,
+                   BOOL_OR(priority > 1)                              AS has_alternates,
                    BOOL_OR(workcenter = 'SMT')                        AS has_smt,
                    BOOL_OR(workcenter = 'TH')                         AS has_th,
                    BOOL_OR(workcenter = 'BE')                         AS has_be
@@ -852,12 +873,22 @@ def ct_assembly_builds(
     """
     Per-build process detail for ONE assembly — the expanded-row tables on the
     'Cycle Time by Assembly' page. Reads raw.parquet scoped to a single assembly
-    (exact match → predicate pushdown), selecting only the five columns the FE
-    needs, so it's far lighter than the wide /data?assembly= pivoted fetch it
-    replaces. The FE groups these long rows into builds (one per
-    revision/line/workcenter).
+    (exact match → predicate pushdown), selecting only the columns the FE needs,
+    so it's far lighter than the wide /data?assembly= pivoted fetch it replaces.
 
-      → [ { revision, sub_workcenter, workcenter, step, seconds }, ... ]
+    Carries `priority` (routing rank — 1 = primary) and `step_order` (the IEDB
+    `order` field, the physical step sequence). A complete build = one routing =
+    (revision, priority); its steps can span multiple sub_workcenters and are
+    sequenced globally by `step_order`. The FE groups these long rows by
+    (revision, priority) and orders the steps by `step_order`.
+
+    Also carries the IEDB step-editor columns: `cap` (capacity), `n` (sample
+    size), and the time components `lct`, `mach`, `imt`, `hand`, `pb`, `hc` (lct
+    is sparse). NOTE the FE multiplies `seconds` by `n` for the displayed cycle
+    time (per IE convention).
+
+      → [ { revision, priority, sub_workcenter, workcenter, step, seconds,
+            step_order, cap, n, lct, mach, imt, hand, pb, hc }, ... ]
     """
     if not CT_MART["raw"].exists():
         raise HTTPException(
@@ -879,14 +910,27 @@ def ct_assembly_builds(
         # the steps. Collapse to one row per step — matches the pivoted table
         # (which pivots on alias). Cycle time is identical across playbooks, so
         # MAX returns the true value.
+        # `order` is a SQL keyword → must be quoted. step_order = the step's
+        # physical sequence (1:1 with the step within a routing). priority is in
+        # the GROUP BY so each routing (1 = primary, 2+ = alternates) stays
+        # separate even when steps share a sub_workcenter.
         df = con.execute(
             f"""
-            SELECT revision, sub_workcenter, workcenter,
+            SELECT revision, priority, sub_workcenter, workcenter,
                    COALESCE(alias, process)    AS step,
-                   MAX(cycle_time_per_process) AS seconds
+                   MAX(cycle_time_per_process) AS seconds,
+                   MIN("order")                AS step_order,
+                   MAX(cap)                    AS cap,
+                   MAX(n)                      AS n,
+                   MAX(lct)                    AS lct,
+                   MAX(mach)                   AS mach,
+                   MAX(imt)                    AS imt,
+                   MAX(hand)                   AS hand,
+                   MAX(pb)                     AS pb,
+                   MAX(hc)                     AS hc
             FROM ct_raw {where}
-            GROUP BY revision, sub_workcenter, workcenter, COALESCE(alias, process)
-            ORDER BY revision, sub_workcenter, workcenter
+            GROUP BY revision, priority, sub_workcenter, workcenter, COALESCE(alias, process)
+            ORDER BY revision, priority, MIN("order")
             """,
             scope,
         ).df()

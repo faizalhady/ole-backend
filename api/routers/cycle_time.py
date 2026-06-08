@@ -825,7 +825,11 @@ def ct_assembly_list(
     table column).
 
       → [ { assembly, family, builds, revisions, primary_builds, has_alternates,
-            has_smt, has_th, has_be }, ... ]
+            has_smt, has_th, has_be, smh }, ... ]
+
+    `smh` = Standard Manufacturing Hour (operator content per unit) =
+    Σ (IMT + Hand) × (S%/100) over the primary routing, averaged across the
+    assembly's priority-1 revisions. S% is the `sampling` column.
     """
     if not CT_MART["raw"].exists():
         raise HTTPException(
@@ -842,20 +846,42 @@ def ct_assembly_list(
     con = _con()
     try:
         _load_parquet(con, "raw", "ct_raw")
+        # `smh` (Standard Manufacturing Hour) = the assembly's operator content
+        # per unit: SMH = (IMT + Hand) × (S%/100) summed over a build's processes,
+        # where S% is the `sampling` column. Computed on the PRIMARY routing
+        # (priority = 1) per revision, then averaged across the assembly's primary
+        # revisions so the collapsed row carries one representative value.
         df = con.execute(
             f"""
-            SELECT assembly,
-                   ANY_VALUE(family)                                  AS family,
-                   COUNT(DISTINCT revision || '|' || sub_workcenter)  AS builds,
-                   COUNT(DISTINCT revision)                           AS revisions,
-                   COUNT(DISTINCT revision) FILTER (WHERE priority = 1) AS primary_builds,
-                   BOOL_OR(priority > 1)                              AS has_alternates,
-                   BOOL_OR(workcenter = 'SMT')                        AS has_smt,
-                   BOOL_OR(workcenter = 'TH')                         AS has_th,
-                   BOOL_OR(workcenter = 'BE')                         AS has_be
-            FROM ct_raw {where}
-            GROUP BY assembly
-            ORDER BY assembly
+            WITH base AS (
+                SELECT * FROM ct_raw {where}
+            ),
+            smh AS (
+                SELECT assembly, AVG(build_smh) AS smh
+                FROM (
+                    SELECT assembly, revision,
+                           SUM((COALESCE(imt, 0) + COALESCE(hand, 0))
+                               * (COALESCE(sampling, 100) / 100.0)) AS build_smh
+                    FROM base
+                    WHERE priority = 1
+                    GROUP BY assembly, revision
+                )
+                GROUP BY assembly
+            )
+            SELECT base.assembly,
+                   ANY_VALUE(base.family)                                  AS family,
+                   COUNT(DISTINCT base.revision || '|' || base.sub_workcenter) AS builds,
+                   COUNT(DISTINCT base.revision)                           AS revisions,
+                   COUNT(DISTINCT base.revision) FILTER (WHERE base.priority = 1) AS primary_builds,
+                   BOOL_OR(base.priority > 1)                              AS has_alternates,
+                   BOOL_OR(base.workcenter = 'SMT')                        AS has_smt,
+                   BOOL_OR(base.workcenter = 'TH')                         AS has_th,
+                   BOOL_OR(base.workcenter = 'BE')                         AS has_be,
+                   ANY_VALUE(smh.smh)                                      AS smh
+            FROM base
+            LEFT JOIN smh USING (assembly)
+            GROUP BY base.assembly
+            ORDER BY base.assembly
             """,
             scope,
         ).df()
@@ -882,13 +908,14 @@ def ct_assembly_builds(
     sequenced globally by `step_order`. The FE groups these long rows by
     (revision, priority) and orders the steps by `step_order`.
 
-    Also carries the IEDB step-editor columns: `cap` (capacity), `n` (sample
-    size), and the time components `lct`, `mach`, `imt`, `hand`, `pb`, `hc` (lct
-    is sparse). NOTE the FE multiplies `seconds` by `n` for the displayed cycle
-    time (per IE convention).
+    Also carries the IEDB step-editor columns: `grp` (group standard), `cap`
+    (capacity), `n` (sample size), `sampling` (S%, 1–100), and the time
+    components `lct`, `mach`, `imt`, `hand`, `pb`, `hc` (lct is sparse). NOTE the
+    FE multiplies `seconds` by `n` for the displayed cycle time (per IE convention).
 
       → [ { revision, priority, sub_workcenter, workcenter, step, seconds,
-            step_order, cap, n, lct, mach, imt, hand, pb, hc }, ... ]
+            step_order, grp, cap, n, sampling, lct, mach, imt, hand, pb, hc,
+            fpy }, ... ]
     """
     if not CT_MART["raw"].exists():
         raise HTTPException(
@@ -922,12 +949,15 @@ def ct_assembly_builds(
                    MIN("order")                AS step_order,
                    MAX(cap)                    AS cap,
                    MAX(n)                      AS n,
+                   MAX(sampling)               AS sampling,
+                   MAX(grp)                    AS grp,
                    MAX(lct)                    AS lct,
                    MAX(mach)                   AS mach,
                    MAX(imt)                    AS imt,
                    MAX(hand)                   AS hand,
                    MAX(pb)                     AS pb,
-                   MAX(hc)                     AS hc
+                   MAX(hc)                     AS hc,
+                   MAX(fpy)                    AS fpy
             FROM ct_raw {where}
             GROUP BY revision, priority, sub_workcenter, workcenter, COALESCE(alias, process)
             ORDER BY revision, priority, MIN("order")

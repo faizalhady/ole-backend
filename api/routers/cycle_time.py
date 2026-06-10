@@ -825,12 +825,37 @@ def ct_assembly_list(
     table column).
 
       → [ { assembly, family, builds, revisions, primary_builds, has_alternates,
-            has_smt, has_th, has_be, smh }, ... ]
+            has_smt, has_th, has_be, smh, eff }, ... ]
 
     `smh` = Standard Manufacturing Hour (operator content per unit) =
     Σ (IMT + Hand) × (S%/100) over the primary routing, averaged across the
     assembly's priority-1 revisions. S% is the `sampling` column.
+
+    FAST PATH: when no line filter is given (the workcell page's default), this
+    reads the precomputed assembly_summary.parquet — a cheap per-assembly file
+    instead of a live aggregation over millions of raw rows. The raw-query path
+    below is kept for the line-scoped case (filter dropdown) and as a fallback
+    when the summary mart hasn't been built yet.
     """
+    # ── Fast path: precomputed per-assembly summary mart ──────────────────────
+    if not sub_workcenter and CT_MART["assembly_summary"].exists():
+        con = _con()
+        try:
+            _load_parquet(con, "assembly_summary", "ct_asm")
+            df = con.execute(
+                """
+                SELECT assembly, family, builds, revisions, primary_builds,
+                       has_alternates, has_smt, has_th, has_be, smh, eff
+                FROM ct_asm
+                WHERE customer = ?
+                ORDER BY assembly
+                """,
+                [customer],
+            ).df()
+            return _df_to_json(df)
+        finally:
+            con.close()
+
     if not CT_MART["raw"].exists():
         raise HTTPException(
             status_code=503,
@@ -877,7 +902,8 @@ def ct_assembly_list(
                    BOOL_OR(base.workcenter = 'SMT')                        AS has_smt,
                    BOOL_OR(base.workcenter = 'TH')                         AS has_th,
                    BOOL_OR(base.workcenter = 'BE')                         AS has_be,
-                   ANY_VALUE(smh.smh)                                      AS smh
+                   ANY_VALUE(smh.smh)                                      AS smh,
+                   CAST(NULL AS DOUBLE)                                    AS eff
             FROM base
             LEFT JOIN smh USING (assembly)
             GROUP BY base.assembly
@@ -915,7 +941,7 @@ def ct_assembly_builds(
 
       → [ { revision, priority, sub_workcenter, workcenter, step, seconds,
             step_order, grp, cap, n, sampling, lct, mach, imt, hand, pb, hc,
-            fpy }, ... ]
+            fpy, eff }, ... ]   (eff = per-line efficiency, NULL until built)
     """
     if not CT_MART["raw"].exists():
         raise HTTPException(
@@ -923,15 +949,28 @@ def ct_assembly_builds(
             detail="Cycle Time raw.parquet not found. Run /api/cycle-time/refresh first.",
         )
 
-    where = "WHERE customer = ? AND assembly = ?"
+    # Columns qualified (ct_raw.*) because the eff join below also exposes
+    # `customer`/`sub_workcenter`, which would otherwise be ambiguous.
+    where = "WHERE ct_raw.customer = ? AND ct_raw.assembly = ?"
     scope = [customer, assembly]
     if sub_workcenter:
-        where += " AND sub_workcenter = ?"
+        where += " AND ct_raw.sub_workcenter = ?"
         scope.append(sub_workcenter)
 
     con = _con()
     try:
         _load_parquet(con, "raw", "ct_raw")
+        # Efficiency (per line) — joined from eff_by_line when available so the FE
+        # can compute real UPH (3600/CT × eff × FPY) instead of an 85% default.
+        if CT_MART["eff_by_line"].exists():
+            _load_parquet(con, "eff_by_line", "ct_eff")
+            eff_join = ("LEFT JOIN ct_eff e "
+                        "ON e.customer = ct_raw.customer "
+                        "AND e.sub_workcenter = ct_raw.sub_workcenter")
+            eff_select = "ANY_VALUE(e.eff) AS eff"
+        else:
+            eff_join = ""
+            eff_select = "CAST(NULL AS DOUBLE) AS eff"
         # Dedupe by (build, step): raw stores one row PER PLAYBOOK (default + each
         # numbered playbook) with the SAME cycle time, so a naive select triples
         # the steps. Collapse to one row per step — matches the pivoted table
@@ -943,24 +982,26 @@ def ct_assembly_builds(
         # separate even when steps share a sub_workcenter.
         df = con.execute(
             f"""
-            SELECT revision, priority, sub_workcenter, workcenter,
-                   COALESCE(alias, process)    AS step,
-                   MAX(cycle_time_per_process) AS seconds,
-                   MIN("order")                AS step_order,
-                   MAX(cap)                    AS cap,
-                   MAX(n)                      AS n,
-                   MAX(sampling)               AS sampling,
-                   MAX(grp)                    AS grp,
-                   MAX(lct)                    AS lct,
-                   MAX(mach)                   AS mach,
-                   MAX(imt)                    AS imt,
-                   MAX(hand)                   AS hand,
-                   MAX(pb)                     AS pb,
-                   MAX(hc)                     AS hc,
-                   MAX(fpy)                    AS fpy
-            FROM ct_raw {where}
-            GROUP BY revision, priority, sub_workcenter, workcenter, COALESCE(alias, process)
-            ORDER BY revision, priority, MIN("order")
+            SELECT ct_raw.revision, ct_raw.priority, ct_raw.sub_workcenter, ct_raw.workcenter,
+                   COALESCE(ct_raw.alias, ct_raw.process)  AS step,
+                   MAX(ct_raw.cycle_time_per_process)      AS seconds,
+                   MIN(ct_raw."order")                     AS step_order,
+                   MAX(ct_raw.cap)                         AS cap,
+                   MAX(ct_raw.n)                           AS n,
+                   MAX(ct_raw.sampling)                    AS sampling,
+                   MAX(ct_raw.grp)                         AS grp,
+                   MAX(ct_raw.lct)                         AS lct,
+                   MAX(ct_raw.mach)                        AS mach,
+                   MAX(ct_raw.imt)                         AS imt,
+                   MAX(ct_raw.hand)                        AS hand,
+                   MAX(ct_raw.pb)                          AS pb,
+                   MAX(ct_raw.hc)                          AS hc,
+                   MAX(ct_raw.fpy)                         AS fpy,
+                   {eff_select}
+            FROM ct_raw {eff_join} {where}
+            GROUP BY ct_raw.revision, ct_raw.priority, ct_raw.sub_workcenter, ct_raw.workcenter,
+                     COALESCE(ct_raw.alias, ct_raw.process)
+            ORDER BY ct_raw.revision, ct_raw.priority, MIN(ct_raw."order")
             """,
             scope,
         ).df()

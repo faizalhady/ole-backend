@@ -23,6 +23,8 @@ CT_MART_DIR  = BASE_DIR / "data" / "mart" / "cycle_time"
 CT_MART = {
     "raw":     CT_MART_DIR / "raw.parquet",       # one row per (assembly, revision, sub_workcenter, process)
     "pivoted": CT_MART_DIR / "pivoted.parquet",   # one row per assembly/rev/sub_wc — processes as columns (Image 2 view)
+    "assembly_summary": CT_MART_DIR / "assembly_summary.parquet",  # one row per (customer, assembly): list-page fields + precomputed SMH (+ eff)
+    "eff_by_line":      CT_MART_DIR / "eff_by_line.parquet",       # (customer, sub_workcenter) → efficiency goal, from GetSummaryGroupProcessData
 }
 
 CT_STATE_FILE = CT_MART_DIR / ".ingest_state.json"

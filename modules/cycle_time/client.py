@@ -27,7 +27,8 @@ _BACKOFF_BASE_S = 5.0   # 5s, 15s, 45s exponential
 
 log = logging.getLogger(__name__)
 
-_ENDPOINT = f"{BASE_URL}/api/rawdataapi/v3/GetDetailRawProcessData"
+_ENDPOINT         = f"{BASE_URL}/api/rawdataapi/v3/GetDetailRawProcessData"
+_SUMMARY_ENDPOINT = f"{BASE_URL}/api/rawdataapi/GetSummaryGroupProcessData"
 
 
 def _headers() -> dict:
@@ -140,3 +141,51 @@ def fetch_all_pages(
         page += 1
 
     return all_records
+
+
+def fetch_summary(customer: str, division: str,
+                  assemblies: list[str] | None = None) -> list[dict]:
+    """
+    Fetch the GRP-level Summary from GetSummaryGroupProcessData.
+
+    We use it only to source `effGoal` (efficiency) per line, which the detail
+    endpoint doesn't carry. The Summary is per (assembly, revision, sub_wc, grp),
+    so an UNSCOPED pull for a big customer (KEYSIGHT) is huge and times out.
+    Pass `assemblies` (a small, representative set — one per line is enough,
+    since effGoal is per line) to bound the response size. Same auth + retry
+    resilience as the detail client.
+
+      → list of SummaryGroupProcessData dicts (camelCase keys), incl.
+        subWorkcenter, effGoal, customer, division, grp, …
+    """
+    params: dict = {"SiteCode": SITE_CODE, "Customer": customer}
+    if division:
+        params["Division"] = division
+    if assemblies:
+        params["Assemblies"] = assemblies   # repeated query param: Assemblies=a&Assemblies=b
+
+    last_exc: Exception | None = None
+    for attempt in range(_MAX_RETRIES + 1):
+        try:
+            resp = requests.get(_SUMMARY_ENDPOINT, headers=_headers(), params=params, timeout=API_TIMEOUT)
+            if resp.status_code == 401:
+                log.warning("401 from IEDB summary — refreshing token, retrying once")
+                invalidate_token()
+                resp = requests.get(_SUMMARY_ENDPOINT, headers=_headers(), params=params, timeout=API_TIMEOUT)
+                if resp.status_code == 401:
+                    raise PermissionError("401 after token refresh — check IEDB_CLIENT_KEY.")
+            if resp.status_code == 403:
+                raise PermissionError(f"403 Forbidden for customer='{customer}' summary.")
+            if resp.status_code >= 500:
+                raise requests.HTTPError(f"{resp.status_code} {resp.reason}", response=resp)
+            resp.raise_for_status()
+            return resp.json() or []
+        except (requests.Timeout, requests.HTTPError, requests.ConnectionError) as e:
+            last_exc = e
+            if attempt >= _MAX_RETRIES:
+                break
+            backoff = _BACKOFF_BASE_S * (3 ** attempt)
+            log.warning(f"  summary {customer} attempt {attempt + 1} failed ({type(e).__name__}) — retry in {backoff:.0f}s")
+            time.sleep(backoff)
+
+    raise RuntimeError(f"Summary for {customer} failed after {_MAX_RETRIES + 1} attempts: {last_exc}") from last_exc

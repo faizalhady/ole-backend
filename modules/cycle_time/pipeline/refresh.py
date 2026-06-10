@@ -10,8 +10,10 @@ Single entry point for the Cycle Time pipeline.
   python -m modules.cycle_time.pipeline.refresh --full --exclude KEYSIGHT,ARISTANETWORKS,Tellabs
 
 Steps:
-  1. ingest    — fetch from IEDB3.0 API → raw.parquet
-  2. transform — pivot raw → pivoted.parquet (Image 2 layout)
+  1. ingest           — fetch detail from IEDB3.0 API → raw.parquet
+  2. transform        — pivot raw → pivoted.parquet (Image 2 layout)
+  3. eff              — fetch GRP Summary → eff_by_line.parquet (efficiency/line)
+  4. assembly_summary — precompute the per-assembly list mart (SMH + eff + flags)
 """
 
 import sys
@@ -23,9 +25,11 @@ from pathlib import Path
 # Allow running as a script from the project root
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
-from modules.cycle_time.pipeline.ingest    import run as run_ingest
-from modules.cycle_time.pipeline.transform import run as run_transform
-from modules.cycle_time.keep_awake          import keep_system_awake
+from modules.cycle_time.pipeline.ingest           import run as run_ingest
+from modules.cycle_time.pipeline.transform        import run as run_transform
+from modules.cycle_time.pipeline.eff              import run as run_eff
+from modules.cycle_time.pipeline.assembly_summary import run as run_assembly_summary
+from modules.cycle_time.keep_awake                 import keep_system_awake
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)s  %(message)s")
 log = logging.getLogger(__name__)
@@ -51,6 +55,16 @@ def run(mode: str = "incremental",
 
     if not run_transform():
         log.error("Transform failed — pivoted.parquet not written.")
+        return False
+
+    # Efficiency is a best-effort enrichment — if the Summary pull fails the
+    # pipeline still completes; assembly_summary just carries NULL eff.
+    with keep_system_awake():
+        if not run_eff(only=only, exclude=exclude):
+            log.warning("Efficiency build did not produce eff_by_line.parquet — continuing with NULL eff.")
+
+    if not run_assembly_summary():
+        log.error("Assembly-summary build failed — assembly_summary.parquet not written.")
         return False
 
     elapsed = (datetime.now() - start).total_seconds()

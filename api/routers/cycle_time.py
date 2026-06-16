@@ -210,11 +210,14 @@ def ct_customers():
 def ct_coverage():
     """
     Per-customer cycle-time data coverage in ONE pass over raw.parquet:
-      → [ { "customer": "ASP", "assemblies": 337, "updated_on": "2026-06-02..." }, ... ]
+      → [ { "customer": "ASP", "assemblies": 337, "revisions": 412,
+            "updated_on": "2026-06-02..." }, ... ]
 
     `assemblies` = distinct assemblies that actually have cycle-time data
-    locally (contrast with the catalog total in /customers). Powers the
-    Workcells league table without a per-customer /profile round trip.
+    locally (contrast with the catalog total in /customers).
+    `revisions`  = distinct (assembly, revision) pairs — an assembly with 3
+    revisions counts as 3. Powers the Workcells league table without a
+    per-customer /profile round trip.
     Returns [] when nothing is ingested yet (mart absent).
     """
     if not CT_MART["raw"].exists():
@@ -226,8 +229,9 @@ def ct_coverage():
         df = con.execute(
             """
             SELECT customer,
-                   COUNT(DISTINCT assembly) AS assemblies,
-                   MAX(updated_on)          AS updated_on
+                   COUNT(DISTINCT assembly)                                      AS assemblies,
+                   COUNT(DISTINCT (assembly || '§' || COALESCE(revision, '')))   AS revisions,
+                   MAX(updated_on)                                               AS updated_on
             FROM ct_raw
             GROUP BY customer
             """

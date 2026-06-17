@@ -241,6 +241,36 @@ def ct_coverage():
         con.close()
 
 
+@router.get("/customer-status")
+def ct_customer_status(site: str = Query("pen", description="Site code for the IEDB report (e.g. 'pen').")):
+    """
+    Proxy to the IEDB CustomerStatus report. Per-customer assembly coverage
+    (NoOfAssemblies / NoOfAssembliesWithData / Complete %) plus the measurement-
+    method breakdown (StopWatch / Most / Estimate).
+
+    Auth (OAuth Bearer) is handled server-side via modules.cycle_time.auth — the
+    browser can't call IEDB directly (401 Unauthorized + cross-origin CORS), so
+    the FE hits this endpoint instead. One IEDB API call per request.
+
+      → [ { "CustomerDivision": "ARISTANETWORKS / ARISTANETWORKS*",
+            "NoOfAssemblies": 7120, "NoOfAssembliesWithData": 6509, "Complete": 91,
+            "StopWatch": 114126, "Most": 0, "Estimate": 2376,
+            "EstimatePercentage": 2, "Site": "PEN" }, ... ]
+    """
+    try:
+        from modules.cycle_time.client import fetch_customer_status
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"IEDB client unavailable: {e}")
+
+    try:
+        return fetch_customer_status(site=site)
+    except PermissionError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+    except Exception as e:
+        log.exception("CustomerStatus fetch failed")
+        raise HTTPException(status_code=502, detail=f"IEDB call failed: {e}")
+
+
 @router.get("/live")
 def ct_live(
     customer:        str = Query(..., description="Customer name (case-sensitive — must match /customers entry)"),

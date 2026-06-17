@@ -27,8 +27,9 @@ _BACKOFF_BASE_S = 5.0   # 5s, 15s, 45s exponential
 
 log = logging.getLogger(__name__)
 
-_ENDPOINT         = f"{BASE_URL}/api/rawdataapi/v3/GetDetailRawProcessData"
-_SUMMARY_ENDPOINT = f"{BASE_URL}/api/rawdataapi/GetSummaryGroupProcessData"
+_ENDPOINT          = f"{BASE_URL}/api/rawdataapi/v3/GetDetailRawProcessData"
+_SUMMARY_ENDPOINT  = f"{BASE_URL}/api/rawdataapi/GetSummaryGroupProcessData"
+_CUST_STATUS_ENDPOINT = f"{BASE_URL}/api/Report/CustomerStatus"
 
 
 def _headers() -> dict:
@@ -141,6 +142,46 @@ def fetch_all_pages(
         page += 1
 
     return all_records
+
+
+def fetch_customer_status(site: str = SITE_CODE) -> list[dict]:
+    """
+    Fetch the IEDB CustomerStatus report — one row per Customer/Division with
+    assembly coverage (NoOfAssemblies / NoOfAssembliesWithData / Complete %) and
+    the measurement-method breakdown (StopWatch / Most / Estimate). Same auth +
+    401-refresh + backoff resilience as fetch_page.
+
+      → list of CustomerStatus dicts (PascalCase keys), incl.
+        CustomerDivision, NoOfAssemblies, NoOfAssembliesWithData, Complete,
+        StopWatch, Most, Estimate, EstimatePercentage, Site.
+    """
+    params = {"site": site}
+
+    last_exc: Exception | None = None
+    for attempt in range(_MAX_RETRIES + 1):
+        try:
+            resp = requests.get(_CUST_STATUS_ENDPOINT, headers=_headers(), params=params, timeout=API_TIMEOUT)
+            if resp.status_code == 401:
+                log.warning("401 from IEDB CustomerStatus — refreshing token, retrying once")
+                invalidate_token()
+                resp = requests.get(_CUST_STATUS_ENDPOINT, headers=_headers(), params=params, timeout=API_TIMEOUT)
+                if resp.status_code == 401:
+                    raise PermissionError("401 after token refresh — check IEDB_CLIENT_KEY.")
+            if resp.status_code == 403:
+                raise PermissionError("403 Forbidden for CustomerStatus. Check access rights.")
+            if resp.status_code >= 500:
+                raise requests.HTTPError(f"{resp.status_code} {resp.reason}", response=resp)
+            resp.raise_for_status()
+            return resp.json() or []
+        except (requests.Timeout, requests.HTTPError, requests.ConnectionError) as e:
+            last_exc = e
+            if attempt >= _MAX_RETRIES:
+                break
+            backoff = _BACKOFF_BASE_S * (3 ** attempt)
+            log.warning(f"  CustomerStatus attempt {attempt + 1} failed ({type(e).__name__}) — retry in {backoff:.0f}s")
+            time.sleep(backoff)
+
+    raise RuntimeError(f"CustomerStatus failed after {_MAX_RETRIES + 1} attempts: {last_exc}") from last_exc
 
 
 def fetch_summary(customer: str, division: str,

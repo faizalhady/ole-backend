@@ -15,6 +15,7 @@ lxml==6.0.2             # BeautifulSoup parser
 # ─── Utilities ───────────────────────────────────────────────────
 python-dateutil==2.9.0.post0
 setuptools==80.9.0
+psutil==7.1.3           # heartbeat RSS in logs/ (optional — heartbeat degrades to uptime-only if absent)
 
 # ─── OLE forecasting (predict endpoint) ──────────────────────────
 statsmodels==0.14.6

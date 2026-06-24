@@ -24,14 +24,23 @@ import logging
 import os
 import threading
 import time
+from pathlib import Path
 
 import requests
 from dotenv import load_dotenv
 
 from modules.cycle_time.config import API_TIMEOUT, TOKEN_EXPIRY_BUFFER_S, TOKEN_URL
 
-load_dotenv()
+# Anchor the .env to the repo root, NOT the process CWD. A bare load_dotenv()
+# searches upward from the working directory — which under a Windows service
+# (Servy) is not the backend folder, so .env was never found and
+# IEDB_CLIENT_KEY read empty even though the file is right here. Resolving an
+# absolute path makes the key load regardless of how/where the process is launched.
+_ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
+load_dotenv(_ENV_PATH)
 log = logging.getLogger(__name__)
+log.info("IEDB auth: .env path %s (exists=%s, key_loaded=%s)",
+         _ENV_PATH, _ENV_PATH.exists(), bool(os.getenv("IEDB_CLIENT_KEY", "").strip()))
 
 
 class _TokenCache:
@@ -61,7 +70,8 @@ class _TokenCache:
         if not key:
             raise EnvironmentError(
                 "IEDB_CLIENT_KEY is not set.\n"
-                "Add it to your .env file. This is the base64 of "
+                f"Looked for it in: {_ENV_PATH} (exists={_ENV_PATH.exists()}).\n"
+                "Add it to that .env file. This is the base64 of "
                 "<client_id>:<client_secret> from Okta — same value the "
                 "previous .NET service used under IEDB:Key."
             )

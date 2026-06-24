@@ -10,16 +10,30 @@ To add a new module:
 """
 
 import sys
-import logging
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(_ROOT))
+
+# Load .env from the repo root up front (anchored to this file, NOT the process
+# CWD) so IEDB_CLIENT_KEY is present for every module and the startup banner
+# reports it accurately — regardless of where Servy launches the process.
+from dotenv import load_dotenv
+load_dotenv(_ROOT / ".env")
 
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from core.database import init_db
+from core.logging_setup import (
+    setup_logging,
+    install_signal_logging,
+    log_startup_banner,
+    log_shutdown_banner,
+    start_heartbeat,
+    stop_heartbeat,
+)
 from api.routers.ole         import router as ole_router
 from api.routers.downtime    import router as downtime_router
 from api.routers.transfers   import router as transfers_router
@@ -29,8 +43,9 @@ from api.routers.lbr         import router as lbr_router
 from api.routers.ipk         import router as ipk_router
 
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)s  %(message)s")
-log = logging.getLogger(__name__)
+# Dual console+file logging, faulthandler, and global excepthooks. Done at import
+# so even an import-time crash lands in logs/ instead of vanishing.
+log = setup_logging()
 
 app = FastAPI(title="OLE Analyzer API", version="1.0.0")
 
@@ -54,8 +69,22 @@ app.include_router(ipk_router)
 
 @app.on_event("startup")
 def startup():
+    # Re-assert our logging config now that uvicorn has installed its own, then
+    # arm the lifecycle forensics so the next "silent" stop is fully traceable.
+    setup_logging()
+    log_startup_banner(log)
+    install_signal_logging(log)          # logs which signal triggers a shutdown
+    start_heartbeat(log, interval_s=60)  # last heartbeat = moment of death
     init_db()
     log.info("SQLite operational DB ready")
+
+
+@app.on_event("shutdown")
+def shutdown():
+    # If this banner appears, the stop was a graceful signalled shutdown (not a
+    # hard kill). Pair it with the "SIGNAL RECEIVED" line to see who asked.
+    stop_heartbeat()
+    log_shutdown_banner(log)
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@
 # Site   : Penang | SiteCode=PEN | siteId=4
 # =============================================================================
 
+import os
 from pathlib import Path
 
 # ─── API ─────────────────────────────────────────────────────────────────────
@@ -28,6 +29,19 @@ CT_MART = {
 }
 
 CT_STATE_FILE = CT_MART_DIR / ".ingest_state.json"
+
+# ─── DuckDB query guardrails ─────────────────────────────────────────────────
+# Each request opens a fresh in-memory DuckDB. `memory_limit` caps a single
+# query's peak RAM; `temp_directory` is what actually lets a large query SPILL
+# to disk instead of raising OutOfMemoryException. The previous config set a
+# limit but NO temp dir, so a heavy query hit the ceiling and threw 500s (the
+# `_duckdb.OutOfMemoryException ... 954 MiB/953.6 MiB used` seen in prod). With a
+# temp dir set, the same query spills and completes. `threads` caps CPU and the
+# per-thread memory overhead on the shared box (OLE + Cycle Time are one process).
+# All three are env-overridable so the server can be tuned without a redeploy.
+CT_DUCKDB_MEMORY_LIMIT = os.getenv("CT_DUCKDB_MEMORY_LIMIT", "2GB")
+CT_DUCKDB_THREADS      = int(os.getenv("CT_DUCKDB_THREADS", "2"))
+CT_DUCKDB_TEMP_DIR     = Path(os.getenv("CT_DUCKDB_TEMP_DIR", str(BASE_DIR / "data" / "tmp" / "duckdb")))
 
 # ─── Active Customers — Penang, IsActive=1, AssemblyCount>0 ─────────────────
 # Sorted by assembly count DESC.

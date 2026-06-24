@@ -13,6 +13,9 @@ env/
 data/
 !data/.gitkeep
 
+# Runtime logs (rotating file logs + faulthandler dumps)
+logs/
+
 # IDEs
 .vscode/
 .idea/

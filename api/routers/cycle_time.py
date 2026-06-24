@@ -23,7 +23,13 @@ import pandas as pd
 import pyarrow.parquet as pq
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 
-from modules.cycle_time.config import CT_CUSTOMERS, CT_MART
+from modules.cycle_time.config import (
+    CT_CUSTOMERS,
+    CT_DUCKDB_MEMORY_LIMIT,
+    CT_DUCKDB_TEMP_DIR,
+    CT_DUCKDB_THREADS,
+    CT_MART,
+)
 
 log = logging.getLogger(__name__)
 
@@ -59,11 +65,18 @@ def _get_status_snapshot() -> dict:
 
 def _con():
     con = duckdb.connect()
-    # Guardrail: cap a single query's working memory. A normal customer-filtered
-    # query uses far less than this, so it's not a throttle — it only forces a
-    # runaway/unfiltered query to spill to disk instead of ballooning the
-    # process (which would take OLE down with it, since it's one app).
-    con.execute("SET memory_limit='1GB'")
+    # Guardrail: cap a single query's working memory AND give DuckDB a temp dir
+    # so it can SPILL to disk past that cap instead of raising OutOfMemoryException
+    # (the old config set a limit but no temp dir, so heavy queries 500'd at the
+    # ceiling). `preserve_insertion_order=false` lets large sorts/aggregations use
+    # far less memory. A normal customer-filtered query uses a fraction of this —
+    # the guardrails only kick in for runaway/unfiltered scans, which now degrade
+    # to slower-but-successful instead of failing and pressuring the shared process.
+    CT_DUCKDB_TEMP_DIR.mkdir(parents=True, exist_ok=True)
+    con.execute(f"SET memory_limit='{CT_DUCKDB_MEMORY_LIMIT}'")
+    con.execute(f"SET threads={CT_DUCKDB_THREADS}")
+    con.execute(f"SET temp_directory='{CT_DUCKDB_TEMP_DIR.as_posix()}'")
+    con.execute("SET preserve_insertion_order=false")
     return con
 
 

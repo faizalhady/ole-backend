@@ -191,7 +191,7 @@ def _run_ct_pipeline(mode: str) -> None:
 @router.post("/refresh", status_code=202)
 def ct_refresh(
     background_tasks: BackgroundTasks,
-    mode: str = Query("incremental", regex="^(incremental|full)$"),
+    mode: str = Query("incremental", pattern="^(incremental|full)$"),
 ):
     """
     Trigger the Cycle Time pipeline in the background.

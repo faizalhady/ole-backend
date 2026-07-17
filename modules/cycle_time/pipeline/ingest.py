@@ -17,7 +17,7 @@ import json
 import logging
 import re
 import shutil
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pandas as pd
@@ -313,8 +313,160 @@ def _fetch_customer(
     return df
 
 
+# ─── Incremental (delta) helpers ──────────────────────────────────────────────
+# Incremental NEVER rebuilds raw.parquet from shards. It pulls only the records
+# IEDB reports as changed since a UTC watermark, then UPSERTS them (replace-by-
+# key, never append-duplicate) into the existing raw.parquet, written atomically.
+# Shards are used ONLY by --full (the heavy, resumable cold pull).
+
+# Re-pull this much extra time before the watermark so an edit landing right on
+# the boundary (or any small clock skew) is never missed. The upsert dedups the
+# overlap, so re-pulling it is harmless.
+_DEFAULT_OVERLAP_DAYS = 7   # steady-state overlap; override per-run via overlap_days
+
+
+def _atomic_write_parquet(df: pd.DataFrame, path: Path) -> None:
+    """Write to a .tmp sibling then rename — a concurrent reader always sees
+    either the old complete file or the new complete file, never a half-write."""
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    df.to_parquet(tmp, index=False)
+    tmp.replace(path)
+
+
+def _max_updated_on_in_raw() -> str | None:
+    """Newest updated_on already in raw.parquet (UTC) — used to seed the
+    watermark on the very first incremental run, when no state exists yet."""
+    if not CT_MART["raw"].exists():
+        return None
+    try:
+        s = pd.read_parquet(CT_MART["raw"], columns=["updated_on"])["updated_on"].dropna()
+    except Exception as e:
+        log.warning(f"Could not read updated_on from raw.parquet ({e}).")
+        return None
+    return str(s.max()) if not s.empty else None
+
+
+def _apply_overlap(base_iso: str, overlap_days: int = _DEFAULT_OVERLAP_DAYS) -> str:
+    """base watermark − overlap_days, as a naive-UTC ISO string IEDB accepts as
+    BeginDate. Longer overlap just re-fetches more (harmless — upsert dedups)."""
+    try:
+        dt = datetime.fromisoformat(str(base_iso).replace("Z", "+00:00")) - timedelta(days=overlap_days)
+        return dt.strftime("%Y-%m-%dT%H:%M:%S")
+    except Exception:
+        return str(base_iso)
+
+
+def _run_incremental(customers: list[dict], state: dict, progress_cb=None,
+                     overlap_days: int = _DEFAULT_OVERLAP_DAYS) -> bool:
+    """
+    Delta refresh: fetch records changed since the watermark for each customer,
+    upsert into the existing raw.parquet. Returns False (without advancing the
+    watermark) if raw.parquet is missing or any customer's fetch fails — so a
+    failed run is safe to simply re-run.
+    """
+    if not CT_MART["raw"].exists():
+        log.error("Incremental needs an existing raw.parquet to upsert into. "
+                  "Run `--full` once to seed it, then incremental keeps it fresh.")
+        return False
+
+    base = state.get("incremental_watermark_utc") or _max_updated_on_in_raw()
+    if not base:
+        log.error("No watermark and raw.parquet has no updated_on to seed from. Run `--full` once.")
+        return False
+    begin_date = _apply_overlap(base, overlap_days)
+    log.info(f"Incremental: fetching records changed since {begin_date} "
+             f"(UTC, {overlap_days}-day overlap; baseline {base})")
+
+    existing = pd.read_parquet(CT_MART["raw"])
+    deltas: list[pd.DataFrame] = []
+    total = len(customers)
+
+    for i, cust in enumerate(customers, start=1):
+        if progress_cb:
+            try: progress_cb(cust["customer"], i - 1, total)
+            except Exception: pass
+        try:
+            records = fetch_all_pages(cust["customer"], cust["division"], begin_date=begin_date)
+        except Exception as e:
+            log.error(f"  delta fetch FAILED for {cust['customer']}: {e} — aborting (watermark not advanced)")
+            return False
+        if records:
+            df = _normalise_page_df(records, cust["customer"], cust["division"])
+            deltas.append(df)
+            log.info(f"  {cust['customer']}: {len(df):,} changed row(s)")
+        else:
+            log.info(f"  {cust['customer']}: no changes")
+        if progress_cb:
+            try: progress_cb(None, i, total)
+            except Exception: pass
+
+    if not deltas:
+        log.info("No changes across all customers — raw.parquet unchanged.")
+        return True
+
+    new = pd.concat(deltas, ignore_index=True).reindex(columns=existing.columns)
+    merged = _upsert(existing, new)
+    _atomic_write_parquet(merged, CT_MART["raw"])
+    log.info(f"Incremental upsert complete: {len(new):,} delta row(s) → raw.parquet now {len(merged):,} rows")
+    return True
+
+
+def run_backfill(only: list[str], progress_cb=None) -> bool:
+    """
+    Safe per-customer BACKFILL: fetch ALL records (no date filter) for the named
+    customers and UPSERT into the existing raw.parquet. Unlike `--full` it never
+    rebuilds from shards, so every other customer is left byte-untouched. Heals
+    gaps that incremental can't — assemblies whose `updatedOn` predates the
+    watermark and so were never in a delta window.
+
+    Upsert semantics: existing rows matching a fetched key are replaced, fetched
+    rows not yet present are appended, and existing rows NOT in the fetch are
+    KEPT (backfill only adds/updates — it never prunes). Does NOT touch the
+    incremental watermark.
+    """
+    if not CT_MART["raw"].exists():
+        log.error("Backfill needs an existing raw.parquet to upsert into.")
+        return False
+    by_name = {c["customer"].lower(): c for c in CT_CUSTOMERS}
+    targets = [by_name[n.lower()] for n in only if n.lower() in by_name]
+    if not targets:
+        log.error(f"Backfill: no matching customers for {only}")
+        return False
+
+    existing = pd.read_parquet(CT_MART["raw"])
+    parts: list[pd.DataFrame] = []
+    total = len(targets)
+    for i, cust in enumerate(targets, start=1):
+        if progress_cb:
+            try: progress_cb(cust["customer"], i - 1, total)
+            except Exception: pass
+        try:
+            records = fetch_all_pages(cust["customer"], cust["division"])  # no begin_date = ALL
+        except Exception as e:
+            log.error(f"  backfill fetch FAILED for {cust['customer']}: {e} — aborting (raw.parquet untouched)")
+            return False
+        if records:
+            parts.append(_normalise_page_df(records, cust["customer"], cust["division"]))
+            log.info(f"  {cust['customer']}: fetched {len(records):,} row(s) (full, no date filter)")
+        else:
+            log.info(f"  {cust['customer']}: no records returned")
+        if progress_cb:
+            try: progress_cb(None, i, total)
+            except Exception: pass
+
+    if not parts:
+        log.info("Backfill: nothing fetched — raw.parquet unchanged.")
+        return True
+    new = pd.concat(parts, ignore_index=True).reindex(columns=existing.columns)
+    merged = _upsert(existing, new)
+    _atomic_write_parquet(merged, CT_MART["raw"])
+    log.info(f"Backfill upsert complete: {len(new):,} fetched row(s) → raw.parquet {len(existing):,} → {len(merged):,} rows")
+    return True
+
+
 def run(mode: str = "incremental", progress_cb=None,
-        only: list[str] | None = None, exclude: list[str] | None = None) -> bool:
+        only: list[str] | None = None, exclude: list[str] | None = None,
+        overlap_days: int = _DEFAULT_OVERLAP_DAYS) -> bool:
     """
     progress_cb: optional callable(customer_name, customers_done, customers_total)
                  invoked AFTER each customer is fetched (success or fail).
@@ -322,25 +474,22 @@ def run(mode: str = "incremental", progress_cb=None,
     only:        if given, only fetch these customer names (case-insensitive).
     exclude:     if given, skip these customer names (case-insensitive).
                  `only` wins over `exclude` when both are set.
+
+    incremental (default) — delta-fetch + upsert into raw.parquet. Never rebuilds
+                            raw from scratch (see _run_incremental).
+    full                  — resumable per-page cold pull into shards, then rebuild
+                            raw.parquet from those shards. Heavy; disaster recovery.
     """
     log.info("=" * 60)
     log.info(f"CYCLE TIME INGEST  starting  (mode={mode})")
     log.info("=" * 60)
 
     CT_MART_DIR.mkdir(parents=True, exist_ok=True)
+    run_start_utc = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S")
+    state = _load_state()
 
-    state = _load_state() if mode == "incremental" else {}
-    begin_date: str | None = state.get("last_run_date") if mode == "incremental" else None
-
-    if begin_date:
-        log.info(f"Incremental: fetching records updated since {begin_date}")
-    else:
-        log.info("Full fetch: no date filter (all records)")
-
-    # Filter customer list by --only / --exclude.
-    # When --only is given, we preserve the ORDER the user typed them in so
-    # callers can deliberately run smallest → biggest (or any order they want).
-    # --exclude doesn't reorder.
+    # Filter customer list by --only / --exclude (shared by both modes).
+    # --only preserves the ORDER the user typed (so they can run smallest → biggest).
     by_name = {c["customer"].lower(): c for c in CT_CUSTOMERS}
     if only:
         seen = set()
@@ -360,12 +509,23 @@ def run(mode: str = "incremental", progress_cb=None,
         if exclude:
             log.info(f"Filter --exclude: {exclude} → {len(customers)} customer(s) remaining")
 
+    # ── INCREMENTAL: delta + upsert; raw.parquet is updated in place, never rebuilt ──
+    if mode != "full":
+        ok = _run_incremental(customers, state, progress_cb, overlap_days=overlap_days)
+        if ok:
+            state["incremental_watermark_utc"] = run_start_utc
+            state["last_run_mode"] = "incremental"
+            _save_state(state)
+        log.info("CYCLE TIME INGEST  complete" if ok else "CYCLE TIME INGEST  aborted")
+        return ok
+
+    # ── FULL: resumable shard cold pull, then rebuild raw.parquet from shards ──
+    log.info("Full fetch: no date filter (all records)")
     SHARDS_DIR.mkdir(parents=True, exist_ok=True)
     failed: list[str] = []
     partial: list[str] = []
     complete: list[str] = []
     total = len(customers)
-    is_full = (mode == "full")
 
     for i, cust in enumerate(customers, start=1):
         if progress_cb:
@@ -375,8 +535,8 @@ def run(mode: str = "incremental", progress_cb=None,
             ok = _fetch_customer_resumable(
                 customer  = cust["customer"],
                 division  = cust["division"],
-                begin_date= begin_date,
-                full      = is_full,
+                begin_date= None,
+                full      = True,
             )
             (complete if ok else partial).append(cust["customer"])
         except Exception as e:
@@ -396,20 +556,21 @@ def run(mode: str = "incremental", progress_cb=None,
         if partial: log.error(f"Partial customers:  {partial}")
         return False
 
-    # Persist top-level state
-    now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    # Persist top-level state. A full pull also resets the incremental baseline
+    # to this run's start, so the next incremental picks up from here.
     state.update({
-        "last_run_date":     now,
-        "last_run_mode":     mode,
-        "total_rows":        total_rows,
-        "complete_customers": complete,
-        "partial_customers":  partial,
-        "failed_customers":   failed,
+        "last_run_date":            run_start_utc,
+        "last_run_mode":            "full",
+        "total_rows":               total_rows,
+        "complete_customers":       complete,
+        "partial_customers":        partial,
+        "failed_customers":         failed,
+        "incremental_watermark_utc": run_start_utc,
     })
     _save_state(state)
 
     log.info(f"Complete: {len(complete)} | Partial (resume next run): {len(partial)} | Crashed: {len(failed)}")
-    if partial: log.warning(f"Partial customers will resume on next --incremental: {partial}")
+    if partial: log.warning(f"Partial customers will resume on next --full: {partial}")
     if failed:  log.error  (f"Crashed customers (need investigation): {failed}")
     log.info("CYCLE TIME INGEST  complete")
     return True

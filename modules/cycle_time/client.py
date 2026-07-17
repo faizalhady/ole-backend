@@ -30,6 +30,7 @@ log = logging.getLogger(__name__)
 _ENDPOINT          = f"{BASE_URL}/api/rawdataapi/v3/GetDetailRawProcessData"
 _SUMMARY_ENDPOINT  = f"{BASE_URL}/api/rawdataapi/GetSummaryGroupProcessData"
 _CUST_STATUS_ENDPOINT = f"{BASE_URL}/api/Report/CustomerStatus"
+_ASSEMBLIES_ENDPOINT  = f"{BASE_URL}/api/Assemblies"
 
 
 def _headers() -> dict:
@@ -182,6 +183,53 @@ def fetch_customer_status(site: str = SITE_CODE) -> list[dict]:
             time.sleep(backoff)
 
     raise RuntimeError(f"CustomerStatus failed after {_MAX_RETRIES + 1} attempts: {last_exc}") from last_exc
+
+
+def fetch_assemblies(customer: str, division: str = "",
+                     has_raw_data: bool | None = None) -> list[dict]:
+    """
+    Fetch the per-customer assembly LIST (metadata only, one row per assembly)
+    from IEDB /api/Assemblies. Fast — no cycle-time detail, no pagination.
+
+    has_raw_data:
+      None / False → full catalogue (every assembly)
+      True         → only assemblies that already have raw cycle-time data
+    "No data" assemblies = full − (has_raw_data=True). See ct_no_data_assemblies.
+
+      → list of dicts, incl. AssemblyId, Assembly, AssemblyName,
+        AssemblyRevision, AssemblyDescription, CustomerFamily, UpdatedOn.
+    """
+    params: dict = {"siteCode": SITE_CODE, "customer": customer}
+    if division:
+        params["division"] = division
+    if has_raw_data is not None:
+        params["hasRawData"] = "true" if has_raw_data else "false"
+
+    last_exc: Exception | None = None
+    for attempt in range(_MAX_RETRIES + 1):
+        try:
+            resp = requests.get(_ASSEMBLIES_ENDPOINT, headers=_headers(), params=params, timeout=API_TIMEOUT)
+            if resp.status_code == 401:
+                log.warning("401 from IEDB Assemblies — refreshing token, retrying once")
+                invalidate_token()
+                resp = requests.get(_ASSEMBLIES_ENDPOINT, headers=_headers(), params=params, timeout=API_TIMEOUT)
+                if resp.status_code == 401:
+                    raise PermissionError("401 after token refresh — check IEDB_CLIENT_KEY.")
+            if resp.status_code == 403:
+                raise PermissionError(f"403 Forbidden for Assemblies (customer='{customer}'). Check access rights.")
+            if resp.status_code >= 500:
+                raise requests.HTTPError(f"{resp.status_code} {resp.reason}", response=resp)
+            resp.raise_for_status()
+            return resp.json() or []
+        except (requests.Timeout, requests.HTTPError, requests.ConnectionError) as e:
+            last_exc = e
+            if attempt >= _MAX_RETRIES:
+                break
+            backoff = _BACKOFF_BASE_S * (3 ** attempt)
+            log.warning(f"  Assemblies attempt {attempt + 1} failed ({type(e).__name__}) — retry in {backoff:.0f}s")
+            time.sleep(backoff)
+
+    raise RuntimeError(f"Assemblies fetch failed after {_MAX_RETRIES + 1} attempts: {last_exc}") from last_exc
 
 
 def fetch_summary(customer: str, division: str,

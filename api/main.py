@@ -41,6 +41,7 @@ from api.routers.cycle_time  import router as cycle_time_router
 from api.routers.ppqt        import router as ppqt_router
 from api.routers.lbr         import router as lbr_router
 from api.routers.ipk         import router as ipk_router
+from api.routers.ebuild      import router as ebuild_router
 
 
 # Dual console+file logging, faulthandler, and global excepthooks. Done at import
@@ -65,6 +66,7 @@ app.include_router(cycle_time_router)
 app.include_router(ppqt_router)
 app.include_router(lbr_router)
 app.include_router(ipk_router)
+app.include_router(ebuild_router)
 
 
 @app.on_event("startup")

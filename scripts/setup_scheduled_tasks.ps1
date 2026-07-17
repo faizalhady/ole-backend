@@ -1,18 +1,24 @@
 <#
 .SYNOPSIS
-  Register the two daily OLE pipeline scheduled tasks.
+  Register the daily IE Pulse pipeline scheduled tasks (OLE + Cycle Time).
 
 .DESCRIPTION
-  Creates / updates two Windows scheduled tasks that call modules/ole/pipeline/refresh.py:
+  Creates / updates Windows scheduled tasks:
 
     IEPulse-OLE-Ingest-PaidHours    10:45  - 5 min after paid-hours upload (10:40)
     IEPulse-OLE-Ingest-Production   13:05  - 5 min after production upload (13:00)
+    IEPulse-CycleTime-Ingest        02:00  - overnight incremental IEDB refresh
 
-  Both tasks read BOTH sources (paid_hours + production). The state file +
+  OLE tasks read BOTH sources (paid_hours + production). The state file +
   date-stitching make it safe to run twice a day:
     - State "since" mark skips files already processed
     - seen_dates seed prevents row duplication
     - _merge_with_existing absorbs any overlap
+
+  Cycle Time runs incremental (delta + upsert): fetches only IEDB records
+  changed since last run, upserts into raw.parquet by primary key (no dupes,
+  no data loss, no cross-workcell changes), then rebuilds pivoted /
+  assembly_summary / eBuild runner mart. Safe to run daily.
 
   Idempotent - re-run this script any time to update timings; existing
   tasks with the same names are replaced.
@@ -43,19 +49,21 @@ Write-Host "Enter the Windows credentials the scheduled tasks should run as."
 Write-Host "Use your domain login (e.g. jabil\4033375). The password is stored"
 Write-Host "encrypted in Windows Task Scheduler. You only type it once."
 Write-Host ""
-$cred = Get-Credential -Message "Credentials for the OLE scheduled tasks"
+$cred = Get-Credential -Message "Credentials for the IE Pulse scheduled tasks"
 $plainPwd = $cred.GetNetworkCredential().Password
 
-function Register-OleTask {
+function Register-PipelineTask {
     param(
         [string]$Name,
         [string]$Time,
-        [string]$Description
+        [string]$Argument,               # e.g. "-m modules.ole.pipeline.refresh"
+        [string]$Description,
+        [int]$TimeLimitMinutes = 30
     )
 
     $action = New-ScheduledTaskAction `
         -Execute $PythonExe `
-        -Argument "-m modules.ole.pipeline.refresh" `
+        -Argument $Argument `
         -WorkingDirectory $Root
 
     $trigger = New-ScheduledTaskTrigger -Daily -At $Time
@@ -63,7 +71,7 @@ function Register-OleTask {
     $settings = New-ScheduledTaskSettingsSet `
         -StartWhenAvailable `
         -DontStopOnIdleEnd `
-        -ExecutionTimeLimit (New-TimeSpan -Minutes 30) `
+        -ExecutionTimeLimit (New-TimeSpan -Minutes $TimeLimitMinutes) `
         -MultipleInstances IgnoreNew
 
     if (Get-ScheduledTask -TaskName $Name -ErrorAction SilentlyContinue) {
@@ -84,18 +92,35 @@ function Register-OleTask {
     Write-Host "Registered: $Name at $Time daily"
 }
 
-Register-OleTask `
+# ── OLE ──────────────────────────────────────────────────────────────────────
+Register-PipelineTask `
     -Name "IEPulse-OLE-Ingest-PaidHours" `
     -Time "10:45" `
+    -Argument "-m modules.ole.pipeline.refresh" `
     -Description "Daily OLE pipeline refresh after paid hours upload."
 
-Register-OleTask `
+Register-PipelineTask `
     -Name "IEPulse-OLE-Ingest-Production" `
     -Time "13:05" `
+    -Argument "-m modules.ole.pipeline.refresh" `
     -Description "Daily OLE pipeline refresh after production upload."
+
+# ── Cycle Time ───────────────────────────────────────────────────────────────
+# Incremental (delta + upsert): fetches only IEDB records changed since the last
+# run and upserts into raw.parquet, then chains transform -> assembly_summary ->
+# eBuild runner mart. Safe to run daily (upsert by key: no dupes, no data loss,
+# no cross-workcell changes). Runs overnight; 4h limit covers a large delta +
+# the 24-month eBuild runner pull. NOTE: incremental can't heal old missed rows
+# (watermark blind spot) — run a manual --backfill periodically for that.
+Register-PipelineTask `
+    -Name "IEPulse-CycleTime-Ingest" `
+    -Time "02:00" `
+    -Argument "-m modules.cycle_time.pipeline.refresh" `
+    -Description "Daily Cycle Time incremental refresh (IEDB -> raw.parquet + transform/assembly_summary/eBuild runner)." `
+    -TimeLimitMinutes 240
 
 Write-Host ""
 Write-Host "Done. Useful commands:"
-Write-Host "  Get-ScheduledTask -TaskName 'IEPulse-OLE-*'"
-Write-Host "  Start-ScheduledTask -TaskName 'IEPulse-OLE-Ingest-PaidHours'"
-Write-Host "  Get-ScheduledTaskInfo -TaskName 'IEPulse-OLE-Ingest-PaidHours'"
+Write-Host "  Get-ScheduledTask -TaskName 'IEPulse-*'"
+Write-Host "  Start-ScheduledTask   -TaskName 'IEPulse-CycleTime-Ingest'   # run it now"
+Write-Host "  Get-ScheduledTaskInfo -TaskName 'IEPulse-CycleTime-Ingest'   # last run result"

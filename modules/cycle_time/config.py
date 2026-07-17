@@ -26,6 +26,7 @@ CT_MART = {
     "pivoted": CT_MART_DIR / "pivoted.parquet",   # one row per assembly/rev/sub_wc — processes as columns (Image 2 view)
     "assembly_summary": CT_MART_DIR / "assembly_summary.parquet",  # one row per (customer, assembly): list-page fields + precomputed SMH (+ eff)
     "eff_by_line":      CT_MART_DIR / "eff_by_line.parquet",       # (customer, sub_workcenter) → efficiency goal, from GetSummaryGroupProcessData
+    "assembly_catalog": CT_MART_DIR / "assembly_catalog.parquet",  # one row per (customer, assembly) FULL IEDB catalogue + has_data flag (incl. no-data)
 }
 
 CT_STATE_FILE = CT_MART_DIR / ".ingest_state.json"
@@ -57,7 +58,7 @@ CT_CUSTOMERS = [
     {"customer": "K_CTEC",                  "division": "K_CTEC*",                       "customer_id": 398,  "assembly_count": 9101},
     {"customer": "LTX",                     "division": "LTX*",                          "customer_id": 366,  "assembly_count": 7228},
     {"customer": "BECKMAN COULTER",         "division": "BECKMAN COULTER*",              "customer_id": 391,  "assembly_count": 2554},
-    {"customer": "DYSON",                   "division": "DYSON*",                        "customer_id": 881,  "assembly_count": 2199},
+    # DYSON removed — workcell EOL 2026-07 (was customer_id 881, 2199 assemblies).
     {"customer": "MICRON SIG",              "division": "MICRON SIG*",                   "customer_id": 128,  "assembly_count": 2068},
     {"customer": "Motorola",                "division": "Mobile Devices*",               "customer_id": 1225, "assembly_count": 1864},
     {"customer": "TMO",                     "division": "TMO*",                          "customer_id": 376,  "assembly_count": 1796},

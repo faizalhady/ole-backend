@@ -1,0 +1,1242 @@
+INFO:     Started server process [9288]
+INFO:     Waiting for application startup.
+2026-05-24 21:25:11,920  INFO  SQLite operational DB ready
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:9007 (Press CTRL+C to quit)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [9288]
+D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py:168: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  mode: str = Query("incremental", regex="^(incremental|full)$"),
+INFO:     Started server process [19444]
+INFO:     Waiting for application startup.
+2026-06-02 16:00:13,404  INFO  SQLite operational DB ready
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:9007 (Press CTRL+C to quit)
+2026-06-02 16:38:36,080  ERROR  Exception in callback _ProactorBasePipeTransport._call_connection_lost(None)
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost(None)>
+Traceback (most recent call last):
+  File "C:\Program Files\Python312\Lib\asyncio\events.py", line 84, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Program Files\Python312\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+INFO:     Shutting down
+D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py:168: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  mode: str = Query("incremental", regex="^(incremental|full)$"),
+INFO:     Started server process [18748]
+INFO:     Waiting for application startup.
+2026-06-02 16:59:17,149  INFO  SQLite operational DB ready
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:9007 (Press CTRL+C to quit)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [18748]
+D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py:181: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  mode: str = Query("incremental", regex="^(incremental|full)$"),
+INFO:     Started server process [17936]
+INFO:     Waiting for application startup.
+2026-06-02 17:18:44,195  INFO  SQLite operational DB ready
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:9007 (Press CTRL+C to quit)
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\uvicorn\protocols\http\h11_impl.py", line 403, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\applications.py", line 1160, in __call__
+    await super().__call__(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\middleware\errors.py", line 186, in __call__
+    raise exc
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\middleware\cors.py", line 88, in __call__
+    await self.app(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\routing.py", line 660, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\routing.py", line 680, in app
+    await route.handle(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\routing.py", line 276, in handle
+    await self.app(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\routing.py", line 130, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\routing.py", line 116, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\routing.py", line 670, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\routing.py", line 326, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\concurrency.py", line 32, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\anyio\to_thread.py", line 63, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 2518, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 1002, in run
+    result = context.run(func, *args)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 589, in ct_data
+    df = con.execute(
+         ^^^^^^^^^^^^
+_duckdb.OutOfMemoryException: Out of Memory Error: failed to pin block of size 256.0 KiB (954.1 MiB/953.6 MiB used)
+Possible solutions:
+* Reducing the number of threads (SET threads=X)
+* Disabling insertion-order preservation (SET preserve_insertion_order=false)
+* Increasing the memory limit (SET memory_limit='...GB')
+See also https://duckdb.org/docs/stable/guides/performance/how_to_tune_workloads
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\uvicorn\protocols\http\h11_impl.py", line 403, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\applications.py", line 1160, in __call__
+    await super().__call__(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\middleware\errors.py", line 186, in __call__
+    raise exc
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\middleware\cors.py", line 88, in __call__
+    await self.app(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\routing.py", line 660, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\routing.py", line 680, in app
+    await route.handle(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\routing.py", line 276, in handle
+    await self.app(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\routing.py", line 130, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\routing.py", line 116, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\routing.py", line 670, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\routing.py", line 326, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\concurrency.py", line 32, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\anyio\to_thread.py", line 63, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 2518, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 1002, in run
+    result = context.run(func, *args)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 589, in ct_data
+    df = con.execute(
+         ^^^^^^^^^^^^
+_duckdb.OutOfMemoryException: Out of Memory Error: failed to pin block of size 256.0 KiB (953.8 MiB/953.6 MiB used)
+Possible solutions:
+* Reducing the number of threads (SET threads=X)
+* Disabling insertion-order preservation (SET preserve_insertion_order=false)
+* Increasing the memory limit (SET memory_limit='...GB')
+See also https://duckdb.org/docs/stable/guides/performance/how_to_tune_workloads
+2026-06-03 00:00:16,919  ERROR  Live fetch failed
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 251, in ct_live
+    batch = fetch_page(
+            ^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 72, in fetch_page
+    resp = requests.get(_ENDPOINT, headers=_headers(), params=params, timeout=API_TIMEOUT)
+                                           ^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 35, in _headers
+    "Authorization": f"Bearer {get_token()}",
+                               ^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 108, in get_token
+    return _cache.get()
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 51, in get
+    return self._refresh()
+           ^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 62, in _refresh
+    raise EnvironmentError(
+OSError: IEDB_CLIENT_KEY is not set.
+Add it to your .env file. This is the base64 of <client_id>:<client_secret> from Okta � same value the previous .NET service used under IEDB:Key.
+2026-06-03 00:00:17,982  ERROR  Live fetch failed
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 251, in ct_live
+    batch = fetch_page(
+            ^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 72, in fetch_page
+    resp = requests.get(_ENDPOINT, headers=_headers(), params=params, timeout=API_TIMEOUT)
+                                           ^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 35, in _headers
+    "Authorization": f"Bearer {get_token()}",
+                               ^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 108, in get_token
+    return _cache.get()
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 51, in get
+    return self._refresh()
+           ^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 62, in _refresh
+    raise EnvironmentError(
+OSError: IEDB_CLIENT_KEY is not set.
+Add it to your .env file. This is the base64 of <client_id>:<client_secret> from Okta � same value the previous .NET service used under IEDB:Key.
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\uvicorn\protocols\http\h11_impl.py", line 403, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\applications.py", line 1160, in __call__
+    await super().__call__(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\middleware\errors.py", line 186, in __call__
+    raise exc
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\middleware\cors.py", line 88, in __call__
+    await self.app(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\routing.py", line 660, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\routing.py", line 680, in app
+    await route.handle(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\routing.py", line 276, in handle
+    await self.app(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\routing.py", line 130, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\routing.py", line 116, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\routing.py", line 670, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\routing.py", line 326, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\concurrency.py", line 32, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\anyio\to_thread.py", line 63, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 2518, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 1002, in run
+    result = context.run(func, *args)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 589, in ct_data
+    df = con.execute(
+         ^^^^^^^^^^^^
+_duckdb.OutOfMemoryException: Out of Memory Error: failed to pin block of size 256.0 KiB (954.1 MiB/953.6 MiB used)
+Possible solutions:
+* Reducing the number of threads (SET threads=X)
+* Disabling insertion-order preservation (SET preserve_insertion_order=false)
+* Increasing the memory limit (SET memory_limit='...GB')
+See also https://duckdb.org/docs/stable/guides/performance/how_to_tune_workloads
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\uvicorn\protocols\http\h11_impl.py", line 403, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\applications.py", line 1160, in __call__
+    await super().__call__(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\middleware\errors.py", line 186, in __call__
+    raise exc
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\middleware\cors.py", line 88, in __call__
+    await self.app(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\routing.py", line 660, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\routing.py", line 680, in app
+    await route.handle(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\routing.py", line 276, in handle
+    await self.app(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\routing.py", line 130, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\routing.py", line 116, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\routing.py", line 670, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\routing.py", line 326, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\concurrency.py", line 32, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\anyio\to_thread.py", line 63, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 2518, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 1002, in run
+    result = context.run(func, *args)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 589, in ct_data
+    df = con.execute(
+         ^^^^^^^^^^^^
+_duckdb.OutOfMemoryException: Out of Memory Error: failed to pin block of size 256.0 KiB (954.1 MiB/953.6 MiB used)
+Possible solutions:
+* Reducing the number of threads (SET threads=X)
+* Disabling insertion-order preservation (SET preserve_insertion_order=false)
+* Increasing the memory limit (SET memory_limit='...GB')
+See also https://duckdb.org/docs/stable/guides/performance/how_to_tune_workloads
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\uvicorn\protocols\http\h11_impl.py", line 403, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\applications.py", line 1160, in __call__
+    await super().__call__(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\middleware\errors.py", line 186, in __call__
+    raise exc
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\middleware\cors.py", line 88, in __call__
+    await self.app(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\routing.py", line 660, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\routing.py", line 680, in app
+    await route.handle(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\routing.py", line 276, in handle
+    await self.app(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\routing.py", line 130, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\routing.py", line 116, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\routing.py", line 670, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\routing.py", line 326, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\concurrency.py", line 32, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\anyio\to_thread.py", line 63, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 2518, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 1002, in run
+    result = context.run(func, *args)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 589, in ct_data
+    df = con.execute(
+         ^^^^^^^^^^^^
+_duckdb.OutOfMemoryException: Out of Memory Error: failed to pin block of size 256.0 KiB (953.6 MiB/953.6 MiB used)
+Possible solutions:
+* Reducing the number of threads (SET threads=X)
+* Disabling insertion-order preservation (SET preserve_insertion_order=false)
+* Increasing the memory limit (SET memory_limit='...GB')
+See also https://duckdb.org/docs/stable/guides/performance/how_to_tune_workloads
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [17936]
+D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py:181: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  mode: str = Query("incremental", regex="^(incremental|full)$"),
+INFO:     Started server process [19604]
+INFO:     Waiting for application startup.
+2026-06-03 03:51:12,506  INFO  SQLite operational DB ready
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:9007 (Press CTRL+C to quit)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [19604]
+D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py:181: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  mode: str = Query("incremental", regex="^(incremental|full)$"),
+INFO:     Started server process [280]
+INFO:     Waiting for application startup.
+2026-06-04 03:25:14,557  INFO  SQLite operational DB ready
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:9007 (Press CTRL+C to quit)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [280]
+D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py:181: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  mode: str = Query("incremental", regex="^(incremental|full)$"),
+INFO:     Started server process [20288]
+INFO:     Waiting for application startup.
+2026-06-04 16:02:29,025  INFO  SQLite operational DB ready
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:9007 (Press CTRL+C to quit)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [20288]
+D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py:181: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  mode: str = Query("incremental", regex="^(incremental|full)$"),
+INFO:     Started server process [22480]
+INFO:     Waiting for application startup.
+2026-06-09 08:47:13,381  INFO  SQLite operational DB ready
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:9007 (Press CTRL+C to quit)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [22480]
+D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py:181: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  mode: str = Query("incremental", regex="^(incremental|full)$"),
+INFO:     Started server process [10088]
+INFO:     Waiting for application startup.
+2026-06-09 08:48:12,277  INFO  SQLite operational DB ready
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:9007 (Press CTRL+C to quit)
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\uvicorn\protocols\http\h11_impl.py", line 403, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\applications.py", line 1160, in __call__
+    await super().__call__(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\middleware\errors.py", line 186, in __call__
+    raise exc
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\middleware\cors.py", line 88, in __call__
+    await self.app(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\routing.py", line 660, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\routing.py", line 680, in app
+    await route.handle(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\routing.py", line 276, in handle
+    await self.app(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\routing.py", line 130, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\routing.py", line 116, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\routing.py", line 670, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\routing.py", line 326, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\concurrency.py", line 32, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\anyio\to_thread.py", line 63, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 2518, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 1002, in run
+    result = context.run(func, *args)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 562, in ct_profile
+    top_assemblies = _df_to_json(con.execute(
+                                 ^^^^^^^^^^^^
+_duckdb.IOException: IO Error: Cannot open file ".tmp\duckdb_temp_storage_S64K-0.tmp": The system cannot find the path specified.
+ERROR:    Exception in ASGI application
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\uvicorn\protocols\http\h11_impl.py", line 403, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\applications.py", line 1160, in __call__
+    await super().__call__(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\middleware\errors.py", line 186, in __call__
+    raise exc
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\middleware\errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\middleware\cors.py", line 88, in __call__
+    await self.app(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\middleware\exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\routing.py", line 660, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\routing.py", line 680, in app
+    await route.handle(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\routing.py", line 276, in handle
+    await self.app(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\routing.py", line 130, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\routing.py", line 116, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\routing.py", line 670, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\fastapi\routing.py", line 326, in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\starlette\concurrency.py", line 32, in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\anyio\to_thread.py", line 63, in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 2518, in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\venv\Lib\site-packages\anyio\_backends\_asyncio.py", line 1002, in run
+    result = context.run(func, *args)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 562, in ct_profile
+    top_assemblies = _df_to_json(con.execute(
+                                 ^^^^^^^^^^^^
+_duckdb.IOException: IO Error: Cannot open file ".tmp\duckdb_temp_storage_S32K-0.tmp": The system cannot find the path specified.
+D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py:181: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  mode: str = Query("incremental", regex="^(incremental|full)$"),
+INFO:     Started server process [22832]
+INFO:     Waiting for application startup.
+2026-06-09 13:40:53,019  INFO  SQLite operational DB ready
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:9007 (Press CTRL+C to quit)
+D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py:181: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  mode: str = Query("incremental", regex="^(incremental|full)$"),
+INFO:     Started server process [24572]
+INFO:     Waiting for application startup.
+2026-06-10 10:42:02,357  INFO  SQLite operational DB ready
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:9007 (Press CTRL+C to quit)
+D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py:181: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  mode: str = Query("incremental", regex="^(incremental|full)$"),
+INFO:     Started server process [24208]
+INFO:     Waiting for application startup.
+2026-06-12 16:26:36,054  INFO  SQLite operational DB ready
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:9007 (Press CTRL+C to quit)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [24208]
+D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py:181: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  mode: str = Query("incremental", regex="^(incremental|full)$"),
+INFO:     Started server process [22864]
+INFO:     Waiting for application startup.
+2026-06-15 09:44:01,557  INFO  SQLite operational DB ready
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:9007 (Press CTRL+C to quit)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [22864]
+D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py:181: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  mode: str = Query("incremental", regex="^(incremental|full)$"),
+INFO:     Started server process [8744]
+INFO:     Waiting for application startup.
+2026-06-15 09:44:51,211  INFO  SQLite operational DB ready
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:9007 (Press CTRL+C to quit)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [8744]
+D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py:181: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  mode: str = Query("incremental", regex="^(incremental|full)$"),
+INFO:     Started server process [24256]
+INFO:     Waiting for application startup.
+2026-06-15 09:52:19,263  INFO  SQLite operational DB ready
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:9007 (Press CTRL+C to quit)
+D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py:181: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  mode: str = Query("incremental", regex="^(incremental|full)$"),
+INFO:     Started server process [3220]
+INFO:     Waiting for application startup.
+2026-06-15 09:56:42,034  INFO  SQLite operational DB ready
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:9007 (Press CTRL+C to quit)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [3220]
+D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py:181: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  mode: str = Query("incremental", regex="^(incremental|full)$"),
+INFO:     Started server process [18688]
+INFO:     Waiting for application startup.
+2026-06-15 09:56:57,501  INFO  SQLite operational DB ready
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:9007 (Press CTRL+C to quit)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [18688]
+D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py:181: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  mode: str = Query("incremental", regex="^(incremental|full)$"),
+INFO:     Started server process [3176]
+INFO:     Waiting for application startup.
+2026-06-16 16:51:24,724  INFO  SQLite operational DB ready
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:9007 (Press CTRL+C to quit)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [3176]
+D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py:181: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  mode: str = Query("incremental", regex="^(incremental|full)$"),
+INFO:     Started server process [21252]
+INFO:     Waiting for application startup.
+2026-06-17 23:57:20,520  INFO  SQLite operational DB ready
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:9007 (Press CTRL+C to quit)
+2026-06-17 23:58:54,822  ERROR  CustomerStatus fetch failed
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 266, in ct_customer_status
+    return fetch_customer_status(site=site)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 163, in fetch_customer_status
+    resp = requests.get(_CUST_STATUS_ENDPOINT, headers=_headers(), params=params, timeout=API_TIMEOUT)
+                                                       ^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 37, in _headers
+    "Authorization": f"Bearer {get_token()}",
+                               ^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 108, in get_token
+    return _cache.get()
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 51, in get
+    return self._refresh()
+           ^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 62, in _refresh
+    raise EnvironmentError(
+OSError: IEDB_CLIENT_KEY is not set.
+Add it to your .env file. This is the base64 of <client_id>:<client_secret> from Okta � same value the previous .NET service used under IEDB:Key.
+2026-06-17 23:58:55,931  ERROR  CustomerStatus fetch failed
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 266, in ct_customer_status
+    return fetch_customer_status(site=site)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 163, in fetch_customer_status
+    resp = requests.get(_CUST_STATUS_ENDPOINT, headers=_headers(), params=params, timeout=API_TIMEOUT)
+                                                       ^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 37, in _headers
+    "Authorization": f"Bearer {get_token()}",
+                               ^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 108, in get_token
+    return _cache.get()
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 51, in get
+    return self._refresh()
+           ^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 62, in _refresh
+    raise EnvironmentError(
+OSError: IEDB_CLIENT_KEY is not set.
+Add it to your .env file. This is the base64 of <client_id>:<client_secret> from Okta � same value the previous .NET service used under IEDB:Key.
+2026-06-17 23:58:56,671  ERROR  CustomerStatus fetch failed
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 266, in ct_customer_status
+    return fetch_customer_status(site=site)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 163, in fetch_customer_status
+    resp = requests.get(_CUST_STATUS_ENDPOINT, headers=_headers(), params=params, timeout=API_TIMEOUT)
+                                                       ^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 37, in _headers
+    "Authorization": f"Bearer {get_token()}",
+                               ^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 108, in get_token
+    return _cache.get()
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 51, in get
+    return self._refresh()
+           ^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 62, in _refresh
+    raise EnvironmentError(
+OSError: IEDB_CLIENT_KEY is not set.
+Add it to your .env file. This is the base64 of <client_id>:<client_secret> from Okta � same value the previous .NET service used under IEDB:Key.
+2026-06-17 23:58:57,839  ERROR  CustomerStatus fetch failed
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 266, in ct_customer_status
+    return fetch_customer_status(site=site)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 163, in fetch_customer_status
+    resp = requests.get(_CUST_STATUS_ENDPOINT, headers=_headers(), params=params, timeout=API_TIMEOUT)
+                                                       ^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 37, in _headers
+    "Authorization": f"Bearer {get_token()}",
+                               ^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 108, in get_token
+    return _cache.get()
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 51, in get
+    return self._refresh()
+           ^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 62, in _refresh
+    raise EnvironmentError(
+OSError: IEDB_CLIENT_KEY is not set.
+Add it to your .env file. This is the base64 of <client_id>:<client_secret> from Okta � same value the previous .NET service used under IEDB:Key.
+2026-06-17 23:58:59,190  ERROR  CustomerStatus fetch failed
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 266, in ct_customer_status
+    return fetch_customer_status(site=site)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 163, in fetch_customer_status
+    resp = requests.get(_CUST_STATUS_ENDPOINT, headers=_headers(), params=params, timeout=API_TIMEOUT)
+                                                       ^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 37, in _headers
+    "Authorization": f"Bearer {get_token()}",
+                               ^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 108, in get_token
+    return _cache.get()
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 51, in get
+    return self._refresh()
+           ^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 62, in _refresh
+    raise EnvironmentError(
+OSError: IEDB_CLIENT_KEY is not set.
+Add it to your .env file. This is the base64 of <client_id>:<client_secret> from Okta � same value the previous .NET service used under IEDB:Key.
+2026-06-17 23:59:00,346  ERROR  CustomerStatus fetch failed
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 266, in ct_customer_status
+    return fetch_customer_status(site=site)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 163, in fetch_customer_status
+    resp = requests.get(_CUST_STATUS_ENDPOINT, headers=_headers(), params=params, timeout=API_TIMEOUT)
+                                                       ^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 37, in _headers
+    "Authorization": f"Bearer {get_token()}",
+                               ^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 108, in get_token
+    return _cache.get()
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 51, in get
+    return self._refresh()
+           ^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 62, in _refresh
+    raise EnvironmentError(
+OSError: IEDB_CLIENT_KEY is not set.
+Add it to your .env file. This is the base64 of <client_id>:<client_secret> from Okta � same value the previous .NET service used under IEDB:Key.
+2026-06-17 23:59:08,064  ERROR  CustomerStatus fetch failed
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 266, in ct_customer_status
+    return fetch_customer_status(site=site)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 163, in fetch_customer_status
+    resp = requests.get(_CUST_STATUS_ENDPOINT, headers=_headers(), params=params, timeout=API_TIMEOUT)
+                                                       ^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 37, in _headers
+    "Authorization": f"Bearer {get_token()}",
+                               ^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 108, in get_token
+    return _cache.get()
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 51, in get
+    return self._refresh()
+           ^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 62, in _refresh
+    raise EnvironmentError(
+OSError: IEDB_CLIENT_KEY is not set.
+Add it to your .env file. This is the base64 of <client_id>:<client_secret> from Okta � same value the previous .NET service used under IEDB:Key.
+2026-06-17 23:59:09,163  ERROR  CustomerStatus fetch failed
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 266, in ct_customer_status
+    return fetch_customer_status(site=site)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 163, in fetch_customer_status
+    resp = requests.get(_CUST_STATUS_ENDPOINT, headers=_headers(), params=params, timeout=API_TIMEOUT)
+                                                       ^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 37, in _headers
+    "Authorization": f"Bearer {get_token()}",
+                               ^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 108, in get_token
+    return _cache.get()
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 51, in get
+    return self._refresh()
+           ^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 62, in _refresh
+    raise EnvironmentError(
+OSError: IEDB_CLIENT_KEY is not set.
+Add it to your .env file. This is the base64 of <client_id>:<client_secret> from Okta � same value the previous .NET service used under IEDB:Key.
+2026-06-17 23:59:56,071  ERROR  CustomerStatus fetch failed
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 266, in ct_customer_status
+    return fetch_customer_status(site=site)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 163, in fetch_customer_status
+    resp = requests.get(_CUST_STATUS_ENDPOINT, headers=_headers(), params=params, timeout=API_TIMEOUT)
+                                                       ^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 37, in _headers
+    "Authorization": f"Bearer {get_token()}",
+                               ^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 108, in get_token
+    return _cache.get()
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 51, in get
+    return self._refresh()
+           ^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 62, in _refresh
+    raise EnvironmentError(
+OSError: IEDB_CLIENT_KEY is not set.
+Add it to your .env file. This is the base64 of <client_id>:<client_secret> from Okta � same value the previous .NET service used under IEDB:Key.
+2026-06-17 23:59:57,118  ERROR  CustomerStatus fetch failed
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 266, in ct_customer_status
+    return fetch_customer_status(site=site)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 163, in fetch_customer_status
+    resp = requests.get(_CUST_STATUS_ENDPOINT, headers=_headers(), params=params, timeout=API_TIMEOUT)
+                                                       ^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 37, in _headers
+    "Authorization": f"Bearer {get_token()}",
+                               ^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 108, in get_token
+    return _cache.get()
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 51, in get
+    return self._refresh()
+           ^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 62, in _refresh
+    raise EnvironmentError(
+OSError: IEDB_CLIENT_KEY is not set.
+Add it to your .env file. This is the base64 of <client_id>:<client_secret> from Okta � same value the previous .NET service used under IEDB:Key.
+2026-06-17 23:59:57,962  ERROR  CustomerStatus fetch failed
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 266, in ct_customer_status
+    return fetch_customer_status(site=site)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 163, in fetch_customer_status
+    resp = requests.get(_CUST_STATUS_ENDPOINT, headers=_headers(), params=params, timeout=API_TIMEOUT)
+                                                       ^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 37, in _headers
+    "Authorization": f"Bearer {get_token()}",
+                               ^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 108, in get_token
+    return _cache.get()
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 51, in get
+    return self._refresh()
+           ^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 62, in _refresh
+    raise EnvironmentError(
+OSError: IEDB_CLIENT_KEY is not set.
+Add it to your .env file. This is the base64 of <client_id>:<client_secret> from Okta � same value the previous .NET service used under IEDB:Key.
+2026-06-17 23:59:59,175  ERROR  CustomerStatus fetch failed
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 266, in ct_customer_status
+    return fetch_customer_status(site=site)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 163, in fetch_customer_status
+    resp = requests.get(_CUST_STATUS_ENDPOINT, headers=_headers(), params=params, timeout=API_TIMEOUT)
+                                                       ^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 37, in _headers
+    "Authorization": f"Bearer {get_token()}",
+                               ^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 108, in get_token
+    return _cache.get()
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 51, in get
+    return self._refresh()
+           ^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 62, in _refresh
+    raise EnvironmentError(
+OSError: IEDB_CLIENT_KEY is not set.
+Add it to your .env file. This is the base64 of <client_id>:<client_secret> from Okta � same value the previous .NET service used under IEDB:Key.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [21252]
+D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py:181: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  mode: str = Query("incremental", regex="^(incremental|full)$"),
+INFO:     Started server process [10620]
+INFO:     Waiting for application startup.
+2026-06-18 00:02:18,858  INFO  SQLite operational DB ready
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:9007 (Press CTRL+C to quit)
+2026-06-18 00:02:30,815  ERROR  CustomerStatus fetch failed
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 266, in ct_customer_status
+    return fetch_customer_status(site=site)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 163, in fetch_customer_status
+    resp = requests.get(_CUST_STATUS_ENDPOINT, headers=_headers(), params=params, timeout=API_TIMEOUT)
+                                                       ^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 37, in _headers
+    "Authorization": f"Bearer {get_token()}",
+                               ^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 108, in get_token
+    return _cache.get()
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 51, in get
+    return self._refresh()
+           ^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 62, in _refresh
+    raise EnvironmentError(
+OSError: IEDB_CLIENT_KEY is not set.
+Add it to your .env file. This is the base64 of <client_id>:<client_secret> from Okta � same value the previous .NET service used under IEDB:Key.
+2026-06-18 00:02:32,349  ERROR  CustomerStatus fetch failed
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 266, in ct_customer_status
+    return fetch_customer_status(site=site)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 163, in fetch_customer_status
+    resp = requests.get(_CUST_STATUS_ENDPOINT, headers=_headers(), params=params, timeout=API_TIMEOUT)
+                                                       ^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 37, in _headers
+    "Authorization": f"Bearer {get_token()}",
+                               ^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 108, in get_token
+    return _cache.get()
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 51, in get
+    return self._refresh()
+           ^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 62, in _refresh
+    raise EnvironmentError(
+OSError: IEDB_CLIENT_KEY is not set.
+Add it to your .env file. This is the base64 of <client_id>:<client_secret> from Okta � same value the previous .NET service used under IEDB:Key.
+2026-06-18 00:02:33,412  ERROR  CustomerStatus fetch failed
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 266, in ct_customer_status
+    return fetch_customer_status(site=site)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 163, in fetch_customer_status
+    resp = requests.get(_CUST_STATUS_ENDPOINT, headers=_headers(), params=params, timeout=API_TIMEOUT)
+                                                       ^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 37, in _headers
+    "Authorization": f"Bearer {get_token()}",
+                               ^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 108, in get_token
+    return _cache.get()
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 51, in get
+    return self._refresh()
+           ^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 62, in _refresh
+    raise EnvironmentError(
+OSError: IEDB_CLIENT_KEY is not set.
+Add it to your .env file. This is the base64 of <client_id>:<client_secret> from Okta � same value the previous .NET service used under IEDB:Key.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [10620]
+D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py:181: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  mode: str = Query("incremental", regex="^(incremental|full)$"),
+INFO:     Started server process [20664]
+INFO:     Waiting for application startup.
+2026-06-18 00:09:50,495  INFO  SQLite operational DB ready
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:9007 (Press CTRL+C to quit)
+2026-06-18 00:09:58,758  ERROR  CustomerStatus fetch failed
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 266, in ct_customer_status
+    return fetch_customer_status(site=site)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 163, in fetch_customer_status
+    resp = requests.get(_CUST_STATUS_ENDPOINT, headers=_headers(), params=params, timeout=API_TIMEOUT)
+                                                       ^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 37, in _headers
+    "Authorization": f"Bearer {get_token()}",
+                               ^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 108, in get_token
+    return _cache.get()
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 51, in get
+    return self._refresh()
+           ^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 62, in _refresh
+    raise EnvironmentError(
+OSError: IEDB_CLIENT_KEY is not set.
+Add it to your .env file. This is the base64 of <client_id>:<client_secret> from Okta � same value the previous .NET service used under IEDB:Key.
+2026-06-18 00:10:00,293  ERROR  CustomerStatus fetch failed
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 266, in ct_customer_status
+    return fetch_customer_status(site=site)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 163, in fetch_customer_status
+    resp = requests.get(_CUST_STATUS_ENDPOINT, headers=_headers(), params=params, timeout=API_TIMEOUT)
+                                                       ^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 37, in _headers
+    "Authorization": f"Bearer {get_token()}",
+                               ^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 108, in get_token
+    return _cache.get()
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 51, in get
+    return self._refresh()
+           ^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 62, in _refresh
+    raise EnvironmentError(
+OSError: IEDB_CLIENT_KEY is not set.
+Add it to your .env file. This is the base64 of <client_id>:<client_secret> from Okta � same value the previous .NET service used under IEDB:Key.
+2026-06-18 00:10:01,357  ERROR  CustomerStatus fetch failed
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 266, in ct_customer_status
+    return fetch_customer_status(site=site)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 163, in fetch_customer_status
+    resp = requests.get(_CUST_STATUS_ENDPOINT, headers=_headers(), params=params, timeout=API_TIMEOUT)
+                                                       ^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 37, in _headers
+    "Authorization": f"Bearer {get_token()}",
+                               ^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 108, in get_token
+    return _cache.get()
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 51, in get
+    return self._refresh()
+           ^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 62, in _refresh
+    raise EnvironmentError(
+OSError: IEDB_CLIENT_KEY is not set.
+Add it to your .env file. This is the base64 of <client_id>:<client_secret> from Okta � same value the previous .NET service used under IEDB:Key.
+2026-06-18 00:10:07,503  ERROR  CustomerStatus fetch failed
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 266, in ct_customer_status
+    return fetch_customer_status(site=site)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 163, in fetch_customer_status
+    resp = requests.get(_CUST_STATUS_ENDPOINT, headers=_headers(), params=params, timeout=API_TIMEOUT)
+                                                       ^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 37, in _headers
+    "Authorization": f"Bearer {get_token()}",
+                               ^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 108, in get_token
+    return _cache.get()
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 51, in get
+    return self._refresh()
+           ^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 62, in _refresh
+    raise EnvironmentError(
+OSError: IEDB_CLIENT_KEY is not set.
+Add it to your .env file. This is the base64 of <client_id>:<client_secret> from Okta � same value the previous .NET service used under IEDB:Key.
+2026-06-18 00:10:08,822  ERROR  CustomerStatus fetch failed
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 266, in ct_customer_status
+    return fetch_customer_status(site=site)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 163, in fetch_customer_status
+    resp = requests.get(_CUST_STATUS_ENDPOINT, headers=_headers(), params=params, timeout=API_TIMEOUT)
+                                                       ^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 37, in _headers
+    "Authorization": f"Bearer {get_token()}",
+                               ^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 108, in get_token
+    return _cache.get()
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 51, in get
+    return self._refresh()
+           ^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 62, in _refresh
+    raise EnvironmentError(
+OSError: IEDB_CLIENT_KEY is not set.
+Add it to your .env file. This is the base64 of <client_id>:<client_secret> from Okta � same value the previous .NET service used under IEDB:Key.
+2026-06-18 00:10:13,221  ERROR  CustomerStatus fetch failed
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 266, in ct_customer_status
+    return fetch_customer_status(site=site)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 163, in fetch_customer_status
+    resp = requests.get(_CUST_STATUS_ENDPOINT, headers=_headers(), params=params, timeout=API_TIMEOUT)
+                                                       ^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 37, in _headers
+    "Authorization": f"Bearer {get_token()}",
+                               ^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 108, in get_token
+    return _cache.get()
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 51, in get
+    return self._refresh()
+           ^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 62, in _refresh
+    raise EnvironmentError(
+OSError: IEDB_CLIENT_KEY is not set.
+Add it to your .env file. This is the base64 of <client_id>:<client_secret> from Okta � same value the previous .NET service used under IEDB:Key.
+2026-06-18 00:10:14,299  ERROR  CustomerStatus fetch failed
+Traceback (most recent call last):
+  File "D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py", line 266, in ct_customer_status
+    return fetch_customer_status(site=site)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 163, in fetch_customer_status
+    resp = requests.get(_CUST_STATUS_ENDPOINT, headers=_headers(), params=params, timeout=API_TIMEOUT)
+                                                       ^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\client.py", line 37, in _headers
+    "Authorization": f"Bearer {get_token()}",
+                               ^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 108, in get_token
+    return _cache.get()
+           ^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 51, in get
+    return self._refresh()
+           ^^^^^^^^^^^^^^^
+  File "D:\Application\IE-Pulse\OLE-BACKEND\modules\cycle_time\auth.py", line 62, in _refresh
+    raise EnvironmentError(
+OSError: IEDB_CLIENT_KEY is not set.
+Add it to your .env file. This is the base64 of <client_id>:<client_secret> from Okta � same value the previous .NET service used under IEDB:Key.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [20664]
+D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py:181: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  mode: str = Query("incremental", regex="^(incremental|full)$"),
+INFO:     Started server process [11916]
+INFO:     Waiting for application startup.
+2026-06-18 00:12:58,777  INFO  SQLite operational DB ready
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:9007 (Press CTRL+C to quit)
+2026-06-18 00:13:47,871  INFO  Fetching new IEDB access token �
+2026-06-18 00:13:49,214  INFO  IEDB token cached; expires in 3600s (~60 min)
+2026-06-18 09:02:58,886  INFO  Fetching new IEDB access token �
+2026-06-18 09:03:00,185  INFO  IEDB token cached; expires in 3600s (~60 min)
+2026-06-18 10:07:08,592  INFO  Fetching new IEDB access token �
+2026-06-18 10:07:09,686  INFO  IEDB token cached; expires in 3600s (~60 min)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [11916]
+D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py:181: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  mode: str = Query("incremental", regex="^(incremental|full)$"),
+INFO:     Started server process [13564]
+INFO:     Waiting for application startup.
+2026-06-18 10:53:17,599  INFO  SQLite operational DB ready
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:9007 (Press CTRL+C to quit)
+2026-06-18 12:58:50,932  INFO  Fetching new IEDB access token �
+2026-06-18 12:58:52,078  INFO  IEDB token cached; expires in 3600s (~60 min)
+2026-06-18 14:02:27,173  INFO  Fetching new IEDB access token �
+2026-06-18 14:02:28,253  INFO  IEDB token cached; expires in 3600s (~60 min)
+2026-06-18 16:36:24,602  INFO  Fetching new IEDB access token �
+2026-06-18 16:36:25,710  INFO  IEDB token cached; expires in 3600s (~60 min)
+2026-06-19 09:27:29,914  INFO  Fetching new IEDB access token �
+2026-06-19 09:27:31,099  INFO  IEDB token cached; expires in 3600s (~60 min)
+2026-06-19 12:23:03,692  INFO  Fetching new IEDB access token �
+2026-06-19 12:23:04,708  INFO  IEDB token cached; expires in 3600s (~60 min)
+2026-06-19 14:52:15,422  INFO  Fetching new IEDB access token �
+2026-06-19 14:52:16,657  INFO  IEDB token cached; expires in 3600s (~60 min)
+2026-06-19 16:52:41,984  INFO  Fetching new IEDB access token �
+2026-06-19 16:52:43,234  INFO  IEDB token cached; expires in 3600s (~60 min)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [13564]
+D:\Application\IE-Pulse\OLE-BACKEND\api\routers\cycle_time.py:181: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+  mode: str = Query("incremental", regex="^(incremental|full)$"),
+INFO:     Started server process [8228]
+INFO:     Waiting for application startup.
+2026-06-21 20:09:59,743  INFO  SQLite operational DB ready
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:9007 (Press CTRL+C to quit)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [8224]
+:     Application shutdown complete.

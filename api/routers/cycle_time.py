@@ -159,8 +159,10 @@ def _run_ct_pipeline(mode: str) -> None:
         last_error=None,
     )
     try:
-        from modules.cycle_time.pipeline.ingest    import run as run_ingest
-        from modules.cycle_time.pipeline.transform import run as run_transform
+        from modules.cycle_time.pipeline.ingest           import run as run_ingest
+        from modules.cycle_time.pipeline.transform        import run as run_transform
+        from modules.cycle_time.pipeline.eff              import run as run_eff
+        from modules.cycle_time.pipeline.assembly_summary import run as run_assembly_summary
 
         log.info(f"Cycle Time pipeline started (mode={mode})")
 
@@ -169,16 +171,41 @@ def _run_ct_pipeline(mode: str) -> None:
                         customers_done=done,
                         customers_total=total)
 
+        # 1. ingest → raw.parquet
         if not run_ingest(mode=mode, progress_cb=_progress):
             _set_status(state="failed", finished_at=datetime.utcnow().isoformat() + "Z",
                         last_error="ingest returned False — check server logs")
             log.error("Cycle Time ingest failed — see logs above")
             return
+        # 2. transform → pivoted.parquet
         if not run_transform():
             _set_status(state="failed", finished_at=datetime.utcnow().isoformat() + "Z",
                         last_error="transform returned False — check server logs")
             log.error("Cycle Time transform failed — see logs above")
             return
+        # 3. eff → eff_by_line.parquet (best-effort enrichment)
+        try:
+            if not run_eff():
+                log.warning("Efficiency build produced no eff_by_line.parquet — continuing with NULL eff.")
+        except Exception:
+            log.exception("Efficiency build crashed — continuing (non-fatal).")
+        # 4. assembly_summary → assembly_summary.parquet (the has-data ground truth)
+        if not run_assembly_summary():
+            _set_status(state="failed", finished_at=datetime.utcnow().isoformat() + "Z",
+                        last_error="assembly_summary returned False — check server logs")
+            log.error("Cycle Time assembly_summary failed — see logs above")
+            return
+        # 5. CHAIN: rebuild the eBuild runner mart so the Plant Runners dashboard
+        #    has_data badges reflect the freshly-synced cycle-time data. Non-fatal —
+        #    the cycle-time refresh itself already succeeded.
+        try:
+            from api.routers.ebuild import build_runners_mart, build_projection_runners_mart
+            build_runners_mart(24)             # historical (units built, 24mo)
+            build_projection_runners_mart()    # projection (planned demand, ~4wk)
+            log.info("Chained eBuild runner mart rebuild complete (historical + projection).")
+        except Exception:
+            log.exception("Chained eBuild runner refresh failed (non-fatal) — run POST /api/ebuild/refresh manually.")
+
         _set_status(state="success", finished_at=datetime.utcnow().isoformat() + "Z",
                     customers_done=len(CT_CUSTOMERS), current_customer=None)
         log.info(f"Cycle Time pipeline complete (mode={mode})")
@@ -282,6 +309,207 @@ def ct_customer_status(site: str = Query("pen", description="Site code for the I
     except Exception as e:
         log.exception("CustomerStatus fetch failed")
         raise HTTPException(status_code=502, detail=f"IEDB call failed: {e}")
+
+
+@router.get("/runners")
+def ct_runners(
+    customer: str = Query(..., description="Customer/workcell name."),
+    order:    str = Query("top", pattern="^(top|bottom)$"),
+    limit:    Optional[int] = Query(None, ge=1, le=1000),
+    mode:     str = Query("historical", pattern="^(historical|projection|planner)$"),
+):
+    """
+    Runner ranking (units built per assembly) for one workcell — thin re-export
+    of the eBuild runners mart so the Cycle Time frontend can reach it through
+    the existing /cycle-time proxy (the mart itself is owned by the eBuild
+    module; see api/routers/ebuild.py). Powers runner-priority + badges on the
+    Incompletion Report.
+    """
+    from api.routers.ebuild import ebuild_runners
+    return ebuild_runners(customer=customer, order=order, limit=limit, mode=mode)
+
+
+@router.get("/customer-plants")
+def ct_customer_plants():
+    """Dominant plant per customer — re-export of the eBuild customer-plant mart
+    so the Cycle Time league table can show a Plant column."""
+    from api.routers.ebuild import ebuild_customer_plants
+    return ebuild_customer_plants()
+
+
+@router.get("/plant-runners")
+def ct_plant_runners(
+    top: int = Query(50, ge=1, le=500), plants: int = Query(3, ge=1, le=20),
+    mode: str = Query("historical", pattern="^(historical|projection|planner)$"),
+):
+    """Plant runner dashboard — re-export of the eBuild plant-runners mart so the
+    Cycle Time frontend reaches it through the /cycle-time proxy.
+    mode=historical (24mo units built) | projection (~4wk MES demand) | planner (~13wk Excel demand)."""
+    from api.routers.ebuild import ebuild_plant_runners
+    return ebuild_plant_runners(top=top, plants=plants, mode=mode)
+
+
+# ─── Assembly catalogue (all assemblies + has_data flag) ──────────────────────
+# Refresh state (in-process), mirrors the eBuild refresh state.
+_CATALOG_STATE: dict = {"status": "idle", "started": None, "finished": None, "rows": None, "error": None}
+
+
+def build_assembly_catalog() -> int:
+    """
+    Pull the FULL IEDB assembly catalogue for every configured customer and
+    write assembly_catalog.parquet — one row per (customer, assembly) with a
+    `has_data` flag (contrast assembly_summary, which only holds with-data
+    assemblies). Fast: two /api/Assemblies calls per customer, no heavy ingest.
+    Per-customer failures are logged and skipped. Returns total row count.
+    """
+    from modules.cycle_time.client import fetch_assemblies
+
+    rows: list[dict] = []
+    for c in CT_CUSTOMERS:
+        cust, div = c["customer"], c.get("division", "")
+        try:
+            full = fetch_assemblies(cust, div, has_raw_data=None)
+            with_data = fetch_assemblies(cust, div, has_raw_data=True)
+        except Exception as e:
+            log.warning("assembly catalog: skipping %s (%s)", cust, e)
+            continue
+        with_ids = {a.get("AssemblyId") for a in with_data}
+        for a in full:
+            rows.append({
+                "customer":     cust,
+                "assembly_id":  a.get("AssemblyId"),
+                "assembly":     a.get("AssemblyName"),
+                "assembly_full": a.get("Assembly"),
+                "revision":     a.get("AssemblyRevision"),
+                "description":  a.get("AssemblyDescription"),
+                "family":       a.get("CustomerFamily"),
+                "updated_on":   a.get("UpdatedOn"),
+                "has_data":     a.get("AssemblyId") in with_ids,
+            })
+
+    cols = ["customer", "assembly_id", "assembly", "assembly_full", "revision",
+            "description", "family", "updated_on", "has_data"]
+    df = pd.DataFrame(rows, columns=cols)
+    CT_MART["assembly_catalog"].parent.mkdir(parents=True, exist_ok=True)
+    df.to_parquet(CT_MART["assembly_catalog"], index=False)
+    log.info("assembly catalog: wrote %d rows across %d customers",
+             len(df), df["customer"].nunique() if len(df) else 0)
+    return len(df)
+
+
+def _run_catalog_refresh():
+    _CATALOG_STATE.update(status="running", started=datetime.now().isoformat(), finished=None, rows=None, error=None)
+    try:
+        n = build_assembly_catalog()
+        _CATALOG_STATE.update(status="success", finished=datetime.now().isoformat(), rows=n)
+    except Exception as e:
+        log.exception("assembly catalog refresh failed")
+        _CATALOG_STATE.update(status="error", finished=datetime.now().isoformat(), error=str(e))
+
+
+@router.post("/catalog/refresh")
+def ct_catalog_refresh(background: BackgroundTasks):
+    """Rebuild assembly_catalog.parquet in the background. Poll GET /catalog/status."""
+    if _CATALOG_STATE["status"] == "running":
+        return {"status": "running", "detail": "A catalog refresh is already in progress."}
+    background.add_task(_run_catalog_refresh)
+    return {"status": "started"}
+
+
+@router.get("/catalog/status")
+def ct_catalog_status():
+    return _CATALOG_STATE
+
+
+@router.get("/assembly-catalog")
+def ct_assembly_catalog(customer: str = Query(..., description="Customer name — must match a /customers entry.")):
+    """
+    Per-customer set of assemblies that HAVE cycle-time data, from
+    assembly_summary.parquet — the SAME source the Cycle Time tab renders (built
+    from the GetDetailRawProcessData ingest). This is the reliable ground truth:
+    IEDB's /api/Assemblies is incomplete (misses assemblies that actually have
+    data), which gave false "not in IEDB" badges. The Incompletion Report badges
+    a runner "Has data" iff its assembly is in this set, else "No data".
+
+      → { "customer": "ARISTANETWORKS", "with_data": ["PCA-01822-11", ...] }
+    """
+    match = next((c for c in CT_CUSTOMERS if c["customer"] == customer), None)
+    if match is None:
+        raise HTTPException(status_code=404, detail=f"Unknown customer '{customer}'.")
+
+    summ = CT_MART["assembly_summary"]
+    if not summ.exists():
+        raise HTTPException(status_code=503, detail="assembly_summary mart not found. Run /api/cycle-time/refresh first.")
+
+    df = pd.read_parquet(summ, columns=["customer", "assembly"])
+    with_data = sorted({str(x) for x in df.loc[df["customer"] == customer, "assembly"].dropna()})
+    return {"customer": customer, "with_data": with_data}
+
+
+@router.get("/no-data-assemblies")
+def ct_no_data_assemblies(customer: str = Query(..., description="Customer name — must match a /customers entry.")):
+    """
+    List the assemblies for one customer that have NO cycle-time data yet.
+
+    Reads the stored assembly_catalog.parquet (fast, no live call) when present;
+    falls back to two live IEDB /api/Assemblies calls (full − with-data) when the
+    catalog hasn't been built yet.
+
+      → { "customer": "WABTEC", "total": 394, "with_data": 378, "no_data": 16,
+          "assemblies": [ { Assembly, AssemblyName, AssemblyRevision,
+                            AssemblyDescription, CustomerFamily, UpdatedOn }, ... ] }
+    """
+    match = next((c for c in CT_CUSTOMERS if c["customer"] == customer), None)
+    if match is None:
+        raise HTTPException(status_code=404, detail=f"Unknown customer '{customer}'.")
+
+    # Fast path — stored catalog.
+    cat = CT_MART["assembly_catalog"]
+    if cat.exists():
+        df = pd.read_parquet(cat)
+        df = df[df["customer"] == customer]
+        if len(df):
+            nd = df[~df["has_data"].astype(bool)]
+            keepmap = {"assembly_full": "Assembly", "assembly": "AssemblyName",
+                       "revision": "AssemblyRevision", "description": "AssemblyDescription",
+                       "family": "CustomerFamily", "updated_on": "UpdatedOn"}
+            recs = nd[list(keepmap)].rename(columns=keepmap).to_dict(orient="records")
+            assemblies = [{k: (None if (not isinstance(v, (list, dict)) and pd.isna(v)) else v) for k, v in r.items()} for r in recs]
+            return {
+                "customer":  customer,
+                "total":     int(len(df)),
+                "with_data": int(df["has_data"].astype(bool).sum()),
+                "no_data":   int(len(nd)),
+                "assemblies": assemblies,
+            }
+        # customer absent from catalog → fall through to live
+
+    # Live fallback.
+    try:
+        from modules.cycle_time.client import fetch_assemblies
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"IEDB client unavailable: {e}")
+    division = match.get("division", "")
+    try:
+        full = fetch_assemblies(customer, division, has_raw_data=None)
+        with_data = fetch_assemblies(customer, division, has_raw_data=True)
+    except PermissionError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+    except Exception as e:
+        log.exception("no-data-assemblies fetch failed")
+        raise HTTPException(status_code=502, detail=f"IEDB call failed: {e}")
+
+    with_ids = {a.get("AssemblyId") for a in with_data}
+    no_data = [a for a in full if a.get("AssemblyId") not in with_ids]
+    keep = ("Assembly", "AssemblyName", "AssemblyRevision", "AssemblyDescription",
+            "CustomerFamily", "UpdatedOn")
+    return {
+        "customer":   customer,
+        "total":      len(full),
+        "with_data":  len(with_data),
+        "no_data":    len(no_data),
+        "assemblies": [{k: a.get(k) for k in keep} for a in no_data],
+    }
 
 
 @router.get("/live")

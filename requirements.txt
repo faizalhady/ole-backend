@@ -23,3 +23,6 @@ statsmodels==0.14.6
 # ─── Cycle Time module ───────────────────────────────────────────
 requests==2.32.5        # IEDB3.0 HTTP client
 python-dotenv==1.2.1    # .env loading for IEDB_CLIENT_KEY
+
+# ─── eBuild module ───────────────────────────────────────────────
+pyodbc==5.3.0           # MES / eDashboard SQL Server (SP_GET_SY_SMT_BUILDPLAN)
